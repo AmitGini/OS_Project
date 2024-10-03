@@ -2,3 +2,4 @@ EX3/
 *.log
 *.tmp
 build/
+.git_backup/
