@@ -14,7 +14,6 @@ public:
 
 private:
     std::vector<std::unique_ptr<ActiveObjectDP>> stages;
-    std::shared_ptr<Graph> graph;
     std::mutex graphMutex;
 
     std::vector<std::mutex> stageMutexes;

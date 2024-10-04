@@ -2,12 +2,13 @@
 
 #define NUM_STAGES 4
 
-PipelineDP::PipelineDP() : graph(nullptr), stageCVs(NUM_STAGES), stageMutexes(NUM_STAGES) {
+PipelineDP::PipelineDP() : stageCVs(NUM_STAGES), stageMutexes(NUM_STAGES) {
     // Create 4 stages
     // 1. Create graph
     // 2. Add/Remove edge
     // 3. Compute MST
     // 4. Get MST data
+    this->graph = nullptr;
     for (int i = 0; i < NUM_STAGES; ++i) {
         stages.push_back(std::make_unique<ActiveObjectDP>());
     }

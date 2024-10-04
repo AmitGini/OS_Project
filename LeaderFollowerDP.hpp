@@ -1,16 +1,15 @@
 #ifndef LEADERFOLLOWERDP_HPP
 #define LEADERFOLLOWERDP_HPP
-#include "RequestService.hpp"
-#include <queue>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
+
 #include <functional>
-#include <unordered_set>
+#include <atomic>
+#include <queue>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include "RequestService.hpp"
 
 class LeaderFollowerDP : public RequestService {
-public:
     enum class TaskType {
         CREATE_GRAPH = 1,
         ADD_EDGE = 2,
@@ -19,41 +18,56 @@ public:
         GET_MST_DATA = 5,
         EXIT = 10
     };
-
-    struct Task {
-        int client_FD;
-        TaskType type;
-        int priority;
-        int choice;
-
-        bool operator<(const Task& other) const {
-            return priority < other.priority;
-        }
-    };
-
-    LeaderFollowerDP();
-    ~LeaderFollowerDP() override;
-    void handleRequest(int client_FD) override;
-
 private:
-
-
-    std::atomic<bool> stop;
-    int num_threads;
-    std::atomic<int> current_leader;
-    std::vector<std::thread> t_tasks;
-    std::vector<std::mutex> t_mutexes; 
-    std::priority_queue<Task> tasks;
+    std::mutex mtx;
     std::mutex graphMutex;
     std::condition_variable cv;
+    std::queue<std::pair<TaskType, std::function<bool()>>> taskQueue;
+    bool stop;
+    int numThreads;
 
+    // Protects access to the current leader's thread ID
+    std::mutex leader_mutex;
+    std::thread::id current_leader_id;
+    bool leaderExists;
+
+    // Atomic flags to control task execution
     std::atomic<bool> graph_created{false};
-    std::unordered_set<int> modified_edges;
     std::atomic<bool> mst_computed{false};
+    std::atomic<bool> modified_edges{false}; 
 
-    void workerThread(int thread_id);
+    // Inhertied function to be implemented by derived classes to handle requests
+    void handleRequest(int client_FD) override;
+
+    // Promotes the next leader thread
     void promoteNextLeader();
-    void processTask(const Task& task);
-    int getPriority(TaskType type);
+
+    // Checks if the current thread can become a leader based on the flags
+    bool canBecomeLeader();
+
+    // Set the current leader's ID in a thread-safe manner
+    void setLeaderID(std::thread::id id);
+
+    // Get the current leader's ID in a thread-safe manner
+    std::thread::id getLeaderID();
+
+    // Update the flags based on the completed task type
+    void updateFlags(TaskType completedTaskType);
+
+public:
+    LeaderFollowerDP();
+
+    // The function that each thread will execute
+    void work();
+
+    // Adds a task to the queue
+    void addTask(TaskType type, const std::function<bool()>& task);
+
+    // Stops the thread pool
+    void stopThreadPool();
+
+    // Task processing function (left empty for customization)
+    bool processTask(const std::function<bool()>& task);
 };
-#endif
+
+#endif 
