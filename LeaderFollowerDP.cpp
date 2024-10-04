@@ -25,26 +25,23 @@ void LeaderFollowerDP::promoteNextLeader() {
 }
 
 bool LeaderFollowerDP::canBecomeLeader() {
+    // This method is called with mtx already locked
+    if (taskQueue.empty()) return false;
+    
     TaskType taskType = taskQueue.front().first;
-    std::cout<<"Thread: "<<std::this_thread::get_id()<<" - Task Type: "<<(int)taskType<<std::endl;
-    if(taskType == TaskType::CREATE_GRAPH){
-        std::cout<<"Case 1 Thread: "<<std::this_thread::get_id()<<"Can Become A Leader"<<std::endl;
-        return true;
-    }else if(!graph_created.load()){
-        std::cout<<"Case 2 Thread: "<<std::this_thread::get_id()<<"Failed to Become a Leader"<<std::endl;
-        return false;
-    }else if (taskType == TaskType::ADD_EDGE || taskType == TaskType::REMOVE_EDGE) {
-        return true;
-        std::cout<<"Case 3Thread: "<<std::this_thread::get_id()<<"Can Become A Leader"<<std::endl;
-    }else if (modified_edges && taskType == TaskType::COMPUTE_MST) {
-        std::cout<<"Case 4 Thread: "<<std::this_thread::get_id()<<"Can Become A Leader"<<std::endl;
-        return true;
-    }else if (mst_computed && taskType == TaskType::GET_MST_DATA) {
-        std::cout<<"Case 5 Thread: "<<std::this_thread::get_id()<<"Can Become A Leader"<<std::endl;
-        return true;
-    }else{
-        std::cout<<"Case 6 Thread: "<<std::this_thread::get_id()<<"Failed to Become a Leader"<<std::endl;
-        return false;
+    
+    switch(taskType) {
+        case TaskType::CREATE_GRAPH:
+            return true;
+        case TaskType::ADD_EDGE:
+        case TaskType::REMOVE_EDGE:
+            return graph_created;
+        case TaskType::COMPUTE_MST:
+            return graph_created && modified_edges;
+        case TaskType::GET_MST_DATA:
+            return mst_computed;
+        default:
+            return false;
     }
 }
 
@@ -58,10 +55,7 @@ void LeaderFollowerDP::work() {
             std::cout << "Thread " << std::this_thread::get_id() << " waiting for task\n";
         }
         
-        cv.wait(lock, [this]() {
-            return stop || (!taskQueue.empty() && !leaderExists);
-        });
-
+        cv.wait(lock, [this]() { return stop || (!taskQueue.empty() && !leaderExists);});
         if (stop) break;
 
         if (taskQueue.empty() || leaderExists) {
@@ -72,8 +66,9 @@ void LeaderFollowerDP::work() {
 
         if (!canBecomeLeader()) {
             std::cout << "Thread " << std::this_thread::get_id() 
-                      << " cannot handle task type " 
+                      << " cannot handle task type, Deleting Task!" 
                       << static_cast<int>(taskQueue.front().first) << "\n";
+            taskQueue.pop();
             continue;
         }
 
@@ -85,15 +80,17 @@ void LeaderFollowerDP::work() {
                   << static_cast<int>(taskQueue.front().first) << "\n";
 
         auto currentTask = taskQueue.front();
+        taskQueue.pop();
         
         bool taskSuccess = processTask(currentTask.second);
-        taskQueue.pop();
+        
         if (!taskSuccess) {
-            addTask(currentTask.first, currentTask.second);
+            std::cout<<"Task Failed"<<std::endl;
         } else {
             std::cout<<"Task Completed"<<std::endl;
             updateFlags(currentTask.first);
         }
+        
         lock.unlock();
         promoteNextLeader();
     }
@@ -113,7 +110,6 @@ void LeaderFollowerDP::updateFlags(TaskType completedTaskType) {
             break;
         case TaskType::COMPUTE_MST:
             mst_computed = true;
-            modified_edges = false;
             break;
         default:
             break;
@@ -166,10 +162,15 @@ void LeaderFollowerDP::handleRequest(int client_FD) {
         } 
 
         int choice = startConversation(client_FD);
+        int mstDataChoice = 0;
         if (choice == static_cast<int>(TaskType::EXIT)) {
             sendMessage(client_FD, "Goodbye!");
             close(client_FD);
             return;
+        }
+        if(choice >= 5 && choice <= 9){
+            mstDataChoice = choice;
+            choice = 5;
         }
 
         TaskType taskType = static_cast<TaskType>(choice);
@@ -222,10 +223,10 @@ void LeaderFollowerDP::handleRequest(int client_FD) {
                     };
                     break;
                 case TaskType::GET_MST_DATA:
-                    task = [this, client_FD, choice]() {
+                    task = [this, client_FD, mstDataChoice]() {
                         std::lock_guard<std::mutex> lockLeader(leader_mutex);
                         std::lock_guard<std::mutex> lock(graphMutex);
-                        getMSTData(client_FD, choice);
+                        getMSTData(client_FD, mstDataChoice);
                         return true;
                     };
                     break;
