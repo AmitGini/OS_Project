@@ -18,6 +18,7 @@ public:
     void removeEdge(int u, int v);  // Remove edge from graph
     int getEdgeWeight(int u, int v) const;  // Get weight of edge
     int getSizeVertices() const;  // Get number of vertices
+    int getNumEdges() const;  // Get number of edges
     const std::vector<std::vector<int>> &getGraph() const;  // Get adjacency matrix
     
     // MST Graph Functions - after activate MST Algorithm
@@ -30,7 +31,7 @@ public:
 
 private:
     int numVertices;
-    int totalWeightMST;
+    int numEdges;
     std::vector<std::vector<int>> adjMatrix;  // Adjacency matrix - graph representations
     std::vector<std::vector<int>>* mstMatrix;  // Adjacency matrix - MST representations
 

@@ -2,7 +2,7 @@
 
 
 // Constructor
-Graph::Graph(int vertices) : numVertices(vertices), totalWeightMST(0),
+Graph::Graph(int vertices) : numVertices(vertices), numEdges(0),
 adjMatrix(vertices, std::vector<int>(vertices, 0)), mstMatrix(nullptr) {}
 
 // Destructor
@@ -16,8 +16,15 @@ void Graph::addEdge(int u, int v, int weight){
         //throw std::runtime_error("Invalid vertices");
         return;
     }
-    this->adjMatrix[u][v] = weight;
-    this->adjMatrix[v][u] = weight; // Assuming undirected graph
+    else if(this->adjMatrix[u][v] != 0 || this->adjMatrix[v][u] != 0){
+        this->adjMatrix[u][v] = weight;
+        this->adjMatrix[v][u] = weight; // Assuming undirected graph
+        return;
+    }else{
+        this->adjMatrix[u][v] = weight;
+        this->adjMatrix[v][u] = weight; // Assuming undirected graph
+        this->numEdges++;
+    }
 }
 
 // Remove edge from graph
@@ -25,9 +32,13 @@ void Graph::removeEdge(int u, int v){
     if(u < 0 || u >= this->numVertices || v < 0 || v >= this->numVertices){
         //throw std::runtime_error("Invalid vertices");
         return;
+    }else if(this->adjMatrix[u][v] == 0 || this->adjMatrix[v][u] == 0){
+        return;
+    }else{
+        this->adjMatrix[u][v] = 0;
+        this->adjMatrix[v][u] = 0;
+        this->numEdges--;
     }
-    this->adjMatrix[u][v] = 0;
-    this->adjMatrix[v][u] = 0;
 }
 
 // Get weight of edge
@@ -38,6 +49,11 @@ int Graph::getEdgeWeight(int u, int v) const{
 // Get number of vertices
 int Graph::getSizeVertices() const{
     return this->numVertices;
+}
+
+int Graph::getNumEdges() const
+{
+    return this->numEdges;
 }
 
 // Get adjacency matrix represent the graph

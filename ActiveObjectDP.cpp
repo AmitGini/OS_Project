@@ -33,10 +33,6 @@ void ActiveObjectDP::addTask(std::function<bool()> task) {
     }
 }
 
-bool ActiveObjectDP::hasTasks() const {
-    std::unique_lock<std::mutex> lock(mutex);
-    return !tasks.empty();
-}
 
 bool ActiveObjectDP::waitForCompletion() {
     std::unique_lock<std::mutex> lock(mutex);
@@ -67,11 +63,11 @@ void ActiveObjectDP::work() {
         task = std::move(tasks.front());
 
         try {
+            
             std::cout << "Stage "<<instanceNumber<<": Task started. Remaining tasks: " << tasks.size() << std::endl;
             if(task()){
                 std::cout << "Stage "<<instanceNumber<<": Task completed successfully." << std::endl;
                 tasks.pop();
-                if(tasks.empty()) metConditionForNextStage = true;
             }else throw std::exception();
         } catch (const std::exception& e) {
             std::cerr << "Stage "<<instanceNumber<<": Delete Task, Exception in task execution: " << e.what() << std::endl;
@@ -82,6 +78,9 @@ void ActiveObjectDP::work() {
             std::cout<<"Stage "<<instanceNumber<<": All tasks completed for instance "<<instanceNumber<<"."<<std::endl;
             std::cout<<"Stage "<<instanceNumber<<": Notify all - Next"<<std::endl;
             condition.notify_all();
+        }else {
+            std::cout<<"Stage "<<instanceNumber<<": Notify Next task in this Stage"<<std::endl;
+            condition.notify_one();
         }
     }
 }

@@ -19,6 +19,7 @@ int RequestService::startConversation(int client_FD){
         "8. Get MST Total Weight of Edges \n"
         "9. Print MST\n"
         "10. Exit\n";
+        "11. Exit + Stop Server\n";
     
     while (true) {
         sendMessage(client_FD, menu); // Send the menu to the client
@@ -82,10 +83,11 @@ bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
 
     int graphSize = graph->getSizeVertices();
     memset(buffer, 0, sizeof(buffer));
+    std::string message;
 
     if(toAddEdge){        
         int u = 0, v = 0, weight = 0;
-        std::string message = "Enter the source vertex, destination vertex, and edge weight separated by spaces: ";
+        message = "Enter the source vertex, destination vertex, and edge weight separated by spaces: ";
         sendMessage(client_FD, message);
         read(client_FD, buffer, sizeof(buffer));  // Read edge information from client
         
@@ -100,7 +102,7 @@ bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
         message = "Edge added between " + std::to_string(u) + " and " + std::to_string(v) + " with weight " + std::to_string(weight) + ".\n";
         sendMessage(client_FD, message); // Send acknowledgment to client
     }else{
-        std::string message = "Enter the source vertex, destination vertex, separated by spaces: ";
+        message = "Enter the source vertex, destination vertex, separated by spaces: ";
         sendMessage(client_FD, message);
         read(client_FD, buffer, sizeof(buffer)); // Read edge information from client
         
@@ -136,6 +138,8 @@ bool RequestService::calculateMST(int client_FD) {
     int choice = 0;
     try {
         choice = std::stoi(buffer);
+        memset(buffer, 0, sizeof(buffer));
+
         if (choice < 1 || choice > 2) {
             throw std::invalid_argument("Invalid choice");
         }
@@ -159,7 +163,6 @@ bool RequestService::calculateMST(int client_FD) {
             message = "Failed to compute MST. The result is null.\n";
             sendMessage(client_FD, message);
             delete strategy;
-            memset(buffer, 0, sizeof(buffer));
             return false;
         }
             // Debug: Print resulting MST matrix
@@ -176,7 +179,6 @@ bool RequestService::calculateMST(int client_FD) {
         sendMessage(client_FD, message);
         delete strategy;
     }
-    memset(buffer, 0, sizeof(buffer));
     return true;
 }
 

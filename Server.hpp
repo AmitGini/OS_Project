@@ -28,6 +28,7 @@ class Server {
         Server(bool isPipelineDP);  // Constructor
         ~Server();  // Destructor
         void start();  // Start the server
+        void stop();  // Stop the server    
         void handleConnections();
 };
 

@@ -11,15 +11,12 @@ public:
     ~PipelineDP();
 
     void handleRequest(int client_FD) override;
-
+    void startNotifications(int stage);
 private:
     std::vector<std::unique_ptr<ActiveObjectDP>> stages;
-    std::mutex graphMutex;
-
-    std::vector<std::mutex> stageMutexes;
+    std::vector<std::mutex> prevStageMutexes;
     std::vector<std::condition_variable> stageCVs;
-    bool conditionMet[4] = {true, false, false, false};  //Stage 1 is always true, rest are false
+    std::mutex graphMutex;
+    std::mutex client;
 
-    void setCondition(int stage);
-    void waitForCondition(int stage);
 };

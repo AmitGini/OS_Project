@@ -13,20 +13,38 @@ all: graph
 graph: $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-coverage: CXXFLAGS += $(COVFLAGS)
-coverage: graph
+pcoverage: CXXFLAGS += $(COVFLAGS)
+pcoverage: graph
 	mkdir -p coverage
-	-./$(MAIN_TARGET) -p
-	-./$(MAIN_TARGET) -l
+	-./graph -p
 	gcov main.cpp -o .
 	gcov Graph.cpp -o .
+	gcov KruskalStrategy.cpp -o .
+	gcov PrimStrategy.cpp -o .
+	gcov Server.cpp -o .
+	gcov RequestService.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov PipelineDP.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 
-valgrind: $(MAIN_TARGET)
-	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./$(MAIN_TARGET) -p > valgrind_output_Pipeline.txt 2>&1
-	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./$(MAIN_TARGET) -l >> valgrind_output_LF.txt 2>&1
-
+lfcoverage: CXXFLAGS += $(COVFLAGS)
+lfcoverage: graph
+	mkdir -p coverage
+	-./graph -l
+	gcov main.cpp -o .
+	gcov Graph.cpp -o .
+	gcov KruskalStrategy.cpp -o .
+	gcov PrimStrategy.cpp -o .
+	gcov Server.cpp -o .
+	gcov RequestService.cpp -o .
+	gcov LeaderFollowerDP.cpp -o .
+	lcov --capture --directory . --output-file coverage/coverage.info
+	genhtml coverage/coverage.info --output-directory coverage/html
+	
+valgrind: graph
+	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -p > valgrind_output_Pipeline.txt 2>&1
+	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -l >> valgrind_output_LF.txt 2>&1
 
 # Rule to compile the source files
 main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp LeaderFollowerDP.hpp PipelineDP.hpp
@@ -58,7 +76,8 @@ LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp
 
 # Clean up
 clean:
-	rm -f $(OBJECTS) graph 
+	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* valgrind_output.txt callgraph_report.txt
+	rm -rf coverage profile_data callgraph_data out 
 
 # Declare phony targets
 .PHONY: all clean

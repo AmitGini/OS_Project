@@ -13,9 +13,7 @@ Server::Server(bool isPipelineDP): patternType(nullptr) ,addrlen(sizeof(this->ad
     }
 }
 
-Server::~Server(){
-    delete patternType;
-    
+Server::~Server(){    
     for(int fd :client_sockets){
         if (fd >= 0) {
             close(fd);
@@ -59,6 +57,11 @@ void Server::start() {
     this->handleConnections();
 }
 
+void Server::stop(){
+    delete patternType;
+    delete this;
+}
+
 void Server::handleConnections()
 {
     while (true) {
@@ -72,5 +75,16 @@ void Server::handleConnections()
 
         // client socket closed when ever he exits in the convesation
         this->patternType->handleRequest(new_socket);  // Each request handled by the pipeline
+        
+        bool hasClientConnected = false;
+        for(int fd : client_sockets){
+            if (fd > 0) {
+                hasClientConnected = true;
+                std::cout<<"Client is still connected"<<std::endl;
+                break;
+            }
+        }
+
+        if (!hasClientConnected) stop();
     }
 }

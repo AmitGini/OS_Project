@@ -16,7 +16,6 @@ public:
     ~ActiveObjectDP();
 
     void addTask(std::function<bool()> task);
-    bool hasTasks() const;
     bool waitForCompletion();
     bool getMetConditionForNextStage() const;
     void setMetConditionForNextStage(bool status);
