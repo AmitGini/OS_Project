@@ -1,148 +1,89 @@
 #include "PipelineDP.hpp"
 
-#define NUM_STAGES 4
-
-PipelineDP::PipelineDP() : stageCVs(NUM_STAGES), prevStageMutexes(NUM_STAGES) {
-    // Create 4 stages
-    // 1. Create graph
-    // 2. Add/Remove edge
-    // 3. Compute MST
-    // 4. Get MST data
-    this->graph = nullptr;
-    for (int i = 0; i < NUM_STAGES; ++i) {
-        stages.push_back(std::make_unique<ActiveObjectDP>());
-    }
+PipelineDP::PipelineDP() {
+    setupPipeline();
 }
 
 PipelineDP::~PipelineDP() {
-    for (int i = 0; i < NUM_STAGES; ++i) {
-        stages[i].reset();
+    if (this->graph) {
+        delete this->graph;
     }
-    stages.clear();
-    stageCVs.clear();
-    prevStageMutexes.clear();
-    graphMutex.unlock();
-    client.unlock();
-    if (graph) {
-        delete graph;
+}
+
+void PipelineDP::setupPipeline() {
+    // Create 4 stages
+    for(int i = 0; i < 4; i++) {
+        stages.push_back(std::make_unique<ActiveObjectDP>());
     }
+    
+    // Set up the pipeline connections
+    stages[0]->setNextStage(stages[1].get());
+    stages[1]->setNextStage(stages[2].get());
+    stages[2]->setNextStage(stages[3].get());
+    stages[3]->setNextStage(stages[3].get());
+    stages[0]->setPrevStageStatus(true);
+
+    // Define task handlers for each stage
+    stages[0]->setTaskHandler([this](int client_fd, int choice) -> bool {
+        std::lock_guard<std::mutex> lock(graphMutex);
+        stages[1]->updateNextStage(false);
+        stages[2]->updateNextStage(false);
+        return createGraph(client_fd);
+    });
+
+    stages[1]->setTaskHandler([this](int client_fd, int choice) -> bool {
+        bool oneOfTwo = choice == 2;
+        std::lock_guard<std::mutex> lock(graphMutex);
+        stages[2]->updateNextStage(false);
+        stages[3]->updateNextStage(false);
+        return modifyGraph(client_fd, oneOfTwo);
+    });
+
+    stages[2]->setTaskHandler([this](int client_fd, int choice) -> bool {
+        std::lock_guard<std::mutex> lock(graphMutex);
+        return calculateMST(client_fd);
+    });
+
+    stages[3]->setTaskHandler([this](int client_fd, int choice) -> bool {
+        std::lock_guard<std::mutex> lock(graphMutex);
+        getMSTData(client_fd, choice);
+        return true;
+    });
 }
 
 void PipelineDP::handleRequest(int client_FD) {
     while (true) {
-        std::lock_guard<std::mutex> lockFD(client);
+        std::lock_guard<std::mutex> lockClient(clientMutex);
         int choice = startConversation(client_FD);
-        std::cout << "Choice: " << choice << std::endl;
-
+        
         switch (choice) {
             case 1: // Create graph
-                stages[0]->addTask([this, client_FD]() -> bool {
-                    if(stages[0]->getMetConditionForNextStage()){
-                        std::unique_lock<std::mutex> stageLock(prevStageMutexes[0]);
-                        std::cout<<"Waiting for Stage 1 to complete"<<std::endl;
-                        stageCVs[3].wait(stageLock, [this] { return stages[3]->waitForCompletion(); });
-                    }
-                    {
-                        // std::lock_guard<std::mutex> lock(graphMutex);
-                        if(createGraph(client_FD)) {
-                            std::cout << "Task Stage 1 Done!" << std::endl;
-                            stages[0]->setMetConditionForNextStage(true);  // Set condition for stage 1
-                            stages[1]->setMetConditionForNextStage(false);  // Set condition for stage 2
-                            stages[2]->setMetConditionForNextStage(false);  // Set condition for stage 3 has not met requirements 
-                            stages[3]->setMetConditionForNextStage(false);
-                            startNotifications(0);
-                            return true;
-                        }
-                    }
-                    return false;
-                });
+                stages[0]->enqueue(client_FD, choice);
                 break;
-
             case 2: // Add edge
             case 3: // Remove edge
-                stages[1]->addTask([this, client_FD, choice]() -> bool {
-                    if(!stages[0]->getMetConditionForNextStage()){
-                        std::unique_lock<std::mutex> stageLock(prevStageMutexes[1]);
-                        std::cout<<"Waiting for Stage 1 to complete"<<std::endl;
-                        stageCVs[0].wait(stageLock, [this] { return stages[0]->waitForCompletion(); });
-                    }
-                    {
-                        std::lock_guard<std::mutex> lock(graphMutex);
-                        if(modifyGraph(client_FD, (choice == 2))){
-                            std::cout<<"Task Stage 2 Done!"<<std::endl;
-                            stages[1]->setMetConditionForNextStage(true);  // Set condition for stage 2
-                            stages[2]->setMetConditionForNextStage(false);  // Set condition for stage 3 has not met requirements
-                            stages[3]->setMetConditionForNextStage(false);  // Set condition for stage 4 has not met requirements
-                        }
-                        startNotifications(1);
-                        return true;
-                    }
-                    startNotifications(1);
-                    return false;
-                });
+                stages[1]->enqueue(client_FD, choice);
                 break;
-
             case 4: // Compute MST
-                stages[2]->addTask([this, client_FD]() -> bool {
-                    if(!stages[1]->getMetConditionForNextStage()){
-                        std::unique_lock<std::mutex> stageLock(prevStageMutexes[2]);
-                        std::cout<<"Waiting for Stage 2 to complete"<<std::endl;
-                        stageCVs[1].wait(stageLock, [this] { return stages[1]->waitForCompletion(); });
-                    }
-
-                    std::lock_guard<std::mutex> lock(graphMutex);
-                    if(calculateMST(client_FD)){
-                        std::cout<<"Task Stage 3 Done!"<<std::endl;
-                        stages[2]->setMetConditionForNextStage(true);
-                        startNotifications(2);
-                        return true;
-                    }
-                    startNotifications(2);
-                    return false;
-                });
+                stages[2]->enqueue(client_FD, choice);
                 break;
-
-            case 5: // Longest Weighted path in MST
-            case 6: // Shortest Weighted path in MST
-            case 7: // Average Weight of edges in MST
-            case 8: // Total Weight of the MST
-            case 9: // Print MST
-                stages[3]->addTask([this, client_FD, choice]() -> bool {
-                    if(!stages[2]->getMetConditionForNextStage())
-                    {   
-                        std::unique_lock<std::mutex> stageLock(prevStageMutexes[3]);
-                        std::cout<<"Waiting for Stage 3 to complete"<<std::endl;
-                        stageCVs[2].wait(stageLock, [this] { return stages[2]->waitForCompletion(); });
-                    }
-
-                    std::lock_guard<std::mutex> lock(graphMutex);
-                    getMSTData(client_FD, choice);
-                    std::cout<<"Task Stage 4 Done!"<<std::endl;
-                    stages[3]->setMetConditionForNextStage(true);
-                    startNotifications(3);
-                    return true;
-                });
+            case 5: // MST operations
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+                stages[3]->enqueue(client_FD, choice);
                 break;
-
             case 10: // Exit
                 close(client_FD);
                 return;
-            default:
-                break;
         }
+        validateTaskExecution();
     }
 }
 
-void PipelineDP::startNotifications(int currStage){
-    std::unique_lock<std::mutex> stageLock;
-
-    for(int i = 3; i > 0; --i){
-        int prevStage = (currStage + i) % NUM_STAGES;
-        stageLock = std::unique_lock<std::mutex>(prevStageMutexes[currStage]);
-
-        if (stageCVs[prevStage].wait_for(stageLock, std::chrono::seconds(0)) != std::cv_status::timeout) 
-            stageCVs[prevStage].notify_one();
-        else std::cout<<"No one to notify for Stage "<<prevStage<<" To start Task in Stage"<< ((prevStage+1)%NUM_STAGES)<<std::endl;
-        break;
+void PipelineDP::validateTaskExecution() {
+    for(int i = 3; i >= 0; i--) {
+        stages[i]->notify();
     }
- }
+}

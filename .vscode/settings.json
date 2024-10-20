@@ -58,6 +58,8 @@
         "ios": "cpp",
         "locale": "cpp",
         "iostream": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "future": "cpp",
+        "stack": "cpp"
     }
 }

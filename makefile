@@ -1,10 +1,18 @@
 # Makefile for building the Graph-related project
 
+# OBJECTS:  LeaderFollowerDP.o
+# pcoverage:	gcov ActiveObjectDP.cpp -o .
+# lfcoverage:	gcov LeaderFollowerDP.cpp -o .
+# LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp
+#	 $(CXX) $(CXXFLAGS) -c $< -o $@
+# main.o LeaderFollowerDP.hpp
+
+
 # Compiler settings
 CXX = g++
 CXXFLAGS = -g -std=c++17
 COVFLAGS = -fprofile-arcs -ftest-coverage
-OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o ActiveObjectDP.o PipelineDP.o LeaderFollowerDP.o
+OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o ActiveObjectDP.o PipelineDP.o FunctionQueue.o
 
 # Default target
 all: graph
@@ -23,8 +31,9 @@ pcoverage: graph
 	gcov PrimStrategy.cpp -o .
 	gcov Server.cpp -o .
 	gcov RequestService.cpp -o .
-	gcov ActiveObjectDP.cpp -o .
 	gcov PipelineDP.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov FunctionQueue.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 
@@ -38,7 +47,9 @@ lfcoverage: graph
 	gcov PrimStrategy.cpp -o .
 	gcov Server.cpp -o .
 	gcov RequestService.cpp -o .
-	gcov LeaderFollowerDP.cpp -o .
+	gcov PipelineDP.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov FunctionQueue.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 	
@@ -47,7 +58,7 @@ valgrind: graph
 	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -l >> valgrind_output_LF.txt 2>&1
 
 # Rule to compile the source files
-main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp LeaderFollowerDP.hpp PipelineDP.hpp
+main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipelineDP.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 Graph.o: Graph.cpp Graph.hpp
@@ -65,13 +76,13 @@ Server.o: Server.cpp Server.hpp
 RequestService.o: RequestService.cpp RequestService.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ActiveObjectDP.o: ActiveObjectDP.cpp ActiveObjectDP.hpp
+PipelineDP.o: PipelineDP.cpp RequestService.hpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-PipelineDP.o: PipelineDP.cpp RequestService.hpp PipelineDP.hpp ActiveObjectDP.hpp
+ActiveObjectDP.o: ActiveObjectDP.cpp ActiveObjectDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp
+FunctionQueue.o: FunctionQueue.cpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean up

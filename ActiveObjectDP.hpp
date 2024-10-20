@@ -1,36 +1,34 @@
 #ifndef ACTIVEOBJECTDP_HPP
 #define ACTIVEOBJECTDP_HPP
-#include <iostream>
-#include <functional>
-#include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
 #include <atomic>
-
-static int instanceCount = 0; // Static member variable to count instances
+#include "FunctionQueue.hpp"
 
 class ActiveObjectDP {
+private:
+    FunctionQueue functionQueue;
+    std::mutex activeTask_mutex;
+    std::condition_variable activeTask_condition;
+    std::unique_ptr<std::thread> activeObjectThread;
+    std::atomic<bool> stop{false};
+    ActiveObjectDP* nextStage;
+    bool prevStageStatus;
+    bool working;
+    FunctionQueue::FuncType currentHandler;
+    
+    void work();
+
 public:
     ActiveObjectDP();
     ~ActiveObjectDP();
-
-    void addTask(std::function<bool()> task);
-    bool waitForCompletion();
-    bool getMetConditionForNextStage() const;
-    void setMetConditionForNextStage(bool status);
-
-private:
-    void work();
-
-    std::queue<std::function<bool()>> tasks;
-    mutable std::mutex mutex;
-    std::condition_variable condition;
-    std::thread worker;
-    std::atomic<bool> done;
-
-    bool metConditionForNextStage;
-    int instanceNumber;  // Member variable to store the unique number for each instance
+    void enqueue(int arg1, int arg2);
+    void setNextStage(ActiveObjectDP* next);
+    void setTaskHandler(FunctionQueue::FuncType handler);
+    void setPrevStageStatus(bool status);
+    void updateNextStage(bool status);
+    void notify();
+    bool isWorking();
 };
-
-#endif 
+#endif
