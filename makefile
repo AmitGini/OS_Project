@@ -12,7 +12,7 @@
 CXX = g++
 CXXFLAGS = -g -std=c++17
 COVFLAGS = -fprofile-arcs -ftest-coverage
-OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o ActiveObjectDP.o PipelineDP.o FunctionQueue.o
+OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipelineDP.o ActiveObjectDP.o FunctionQueue.o
 
 # Default target
 all: graph
@@ -76,10 +76,11 @@ Server.o: Server.cpp Server.hpp
 RequestService.o: RequestService.cpp RequestService.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-PipelineDP.o: PipelineDP.cpp RequestService.hpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+ActiveObjectDP.o: ActiveObjectDP.cpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ActiveObjectDP.o: ActiveObjectDP.cpp ActiveObjectDP.hpp FunctionQueue.hpp
+
+PipelineDP.o: PipelineDP.cpp RequestService.hpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 FunctionQueue.o: FunctionQueue.cpp FunctionQueue.hpp

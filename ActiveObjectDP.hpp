@@ -1,10 +1,13 @@
 #ifndef ACTIVEOBJECTDP_HPP
 #define ACTIVEOBJECTDP_HPP
+
 #include <mutex>
 #include <condition_variable>
 #include <thread>
 #include <atomic>
 #include "FunctionQueue.hpp"
+
+class PipelineDP;
 
 class ActiveObjectDP {
 private:
@@ -30,5 +33,6 @@ public:
     void updateNextStage(bool status);
     void notify();
     bool isWorking();
+    void makePipeWait(std::mutex &pipeMtx, PipelineDP *pipe);
 };
 #endif

@@ -2,9 +2,9 @@
 #include <iostream>
 
 void FunctionQueue::enqueue(FuncType func, int arg1, int arg2) {
-    FunctionData data{func, arg1, arg2};
-    funcQueue.push(data);
-    std::cout<<"Function enqueued, task number:"<<arg2<<std::endl;
+    FunctionData data{std::move(func), arg1, arg2}; 
+    funcQueue.push(std::move(data)); 
+    std::cout << "Function enqueued, task number: " << arg2 << std::endl;
 }
 
 std::pair<FunctionQueue::FuncType, std::pair<int, int>> FunctionQueue::dequeue() {
@@ -23,7 +23,8 @@ bool FunctionQueue::dequeueAndExecute() {
         return false;
     }
     
-    FunctionData data = funcQueue.front();
+    FunctionData data = std::move(funcQueue.front()); 
     funcQueue.pop();
+    std::cout<<"Function dequeued and executed"<<std::endl;
     return data.func(data.arg1, data.arg2); // Execute the function with stored arguments
 }

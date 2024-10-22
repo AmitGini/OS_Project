@@ -12,8 +12,8 @@
 class PipelineDP : public RequestService {
 private:
     std::vector<std::unique_ptr<ActiveObjectDP>> stages;
-    std::mutex graphMutex;
-    std::mutex clientMutex;
+    std::mutex pipeMtx;
+    bool stageWorking;
 
     void setupPipeline();
     void validateTaskExecution();
@@ -22,7 +22,7 @@ public:
     PipelineDP();
     ~PipelineDP();
     void handleRequest(int client_FD) override;
-
+    void setStageWorkStatus(bool status);
 };
 
 #endif

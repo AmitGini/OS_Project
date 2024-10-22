@@ -42,6 +42,7 @@ int RequestService::startConversation(int client_FD){
 
 // Create a new graph conversation
 bool RequestService::createGraph(int client_FD){
+    std::lock_guard<std::mutex> lock(graphMutex);
     std::string message = "Enter the number of vertices: ";
     sendMessage(client_FD, message);
 
@@ -74,7 +75,7 @@ bool RequestService::createGraph(int client_FD){
 }
 // Add edge to the graph conversation
 bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
-
+    std::lock_guard<std::mutex> lock(graphMutex);
     if(this->graph == nullptr){
         std::string message = "Graph is not created. Please create a graph first.\n";
         sendMessage(client_FD, message);
@@ -124,6 +125,7 @@ bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
 
 // Calculate MST conversation
 bool RequestService::calculateMST(int client_FD) {
+    std::lock_guard<std::mutex> lock(graphMutex);
     if (this->graph == nullptr) {
         std::string message = "Graph is not created. Please create a graph first.\n";
         sendMessage(client_FD, message);
@@ -184,6 +186,7 @@ bool RequestService::calculateMST(int client_FD) {
 
 // Get MST data based on choice
 void RequestService::getMSTData(int client_FD, int choice) {
+    std::lock_guard<std::mutex> lock(graphMutex);
     if(this->graph == nullptr){
         std::string message = "Graph is not created. Please create a graph first.\n";
         sendMessage(client_FD, message);

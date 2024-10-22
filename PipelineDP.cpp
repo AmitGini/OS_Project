@@ -1,6 +1,6 @@
 #include "PipelineDP.hpp"
 
-PipelineDP::PipelineDP() {
+PipelineDP::PipelineDP() : stageWorking(false) {
     setupPipeline();
 }
 
@@ -12,7 +12,7 @@ PipelineDP::~PipelineDP() {
 
 void PipelineDP::setupPipeline() {
     // Create 4 stages
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 5; i++) {
         stages.push_back(std::make_unique<ActiveObjectDP>());
     }
     
@@ -20,12 +20,12 @@ void PipelineDP::setupPipeline() {
     stages[0]->setNextStage(stages[1].get());
     stages[1]->setNextStage(stages[2].get());
     stages[2]->setNextStage(stages[3].get());
-    stages[3]->setNextStage(stages[3].get());
+    stages[3]->setNextStage(stages[4].get());
+    stages[4]->setNextStage(stages[0].get());  // Extra stage to close the loop - Wont be able to enqueue tasks.
     stages[0]->setPrevStageStatus(true);
 
     // Define task handlers for each stage
     stages[0]->setTaskHandler([this](int client_fd, int choice) -> bool {
-        std::lock_guard<std::mutex> lock(graphMutex);
         stages[1]->updateNextStage(false);
         stages[2]->updateNextStage(false);
         return createGraph(client_fd);
@@ -33,19 +33,16 @@ void PipelineDP::setupPipeline() {
 
     stages[1]->setTaskHandler([this](int client_fd, int choice) -> bool {
         bool oneOfTwo = choice == 2;
-        std::lock_guard<std::mutex> lock(graphMutex);
         stages[2]->updateNextStage(false);
         stages[3]->updateNextStage(false);
         return modifyGraph(client_fd, oneOfTwo);
     });
 
     stages[2]->setTaskHandler([this](int client_fd, int choice) -> bool {
-        std::lock_guard<std::mutex> lock(graphMutex);
         return calculateMST(client_fd);
     });
 
     stages[3]->setTaskHandler([this](int client_fd, int choice) -> bool {
-        std::lock_guard<std::mutex> lock(graphMutex);
         getMSTData(client_fd, choice);
         return true;
     });
@@ -53,7 +50,6 @@ void PipelineDP::setupPipeline() {
 
 void PipelineDP::handleRequest(int client_FD) {
     while (true) {
-        std::lock_guard<std::mutex> lockClient(clientMutex);
         int choice = startConversation(client_FD);
         
         switch (choice) {
@@ -78,12 +74,26 @@ void PipelineDP::handleRequest(int client_FD) {
                 close(client_FD);
                 return;
         }
+
         validateTaskExecution();
     }
 }
 
 void PipelineDP::validateTaskExecution() {
+    
     for(int i = 3; i >= 0; i--) {
+        std::cout<<"************* Stage "<<i<<" *************"<<std::endl;
+        std::cout<<"Trying to Notify Stage"<<std::endl;
         stages[i]->notify();
+        
+        if(i != 3) {
+            stages[i]->makePipeWait(this->pipeMtx, this);
+        }
+        std::cout<<"************************************"<<std::endl;
     }
+}
+
+void PipelineDP::setStageWorkStatus(bool status) {
+     std::cout<<"Pipe Updated Working Status From: "<<this->stageWorking<<" To: "<<status<<std::endl; 
+    this->stageWorking = status;
 }

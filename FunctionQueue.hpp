@@ -1,8 +1,10 @@
 #ifndef FUNCTIONQUEUE_HPP
 #define FUNCTIONQUEUE_HPP
+
 #include <functional>
 #include <queue>
 #include <utility>
+#include <iostream>
 
 class FunctionQueue {
 public:

@@ -10,6 +10,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cstring>
+#include <mutex>
 #include "MSTFactory.hpp"
 #include "MSTStrategy.hpp"
 #include "PrimStrategy.hpp"
@@ -19,6 +20,7 @@
 // Abstract class providing an interface for request handling services.
 class RequestService {
 protected:
+    std::mutex graphMutex;  // Mutex for graph operations
     Graph* graph;  // Pointer to a Graph object
     char buffer[1024];  // Buffer for reading and writing data
 
