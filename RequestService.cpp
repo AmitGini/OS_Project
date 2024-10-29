@@ -9,6 +9,7 @@ void RequestService::sendMessage(int client_fd, const std::string& message) {
 int RequestService::startConversation(int client_FD){
     std::string menu =
         "\nMenu:\n"
+        "0. Execute Tasks      (LF ONLY!)\n"
         "1. Create a New Graph\n"
         "2. Add Edge\n"
         "3. Remove Edge\n"
@@ -18,8 +19,8 @@ int RequestService::startConversation(int client_FD){
         "7. Get MST Average Weight of Edge\n"
         "8. Get MST Total Weight of Edges \n"
         "9. Print MST\n"
-        "10. Exit\n";
-        "11. Exit + Stop Server\n";
+        "10. Exit\n"
+        "\nChoice: ";
     
     while (true) {
         sendMessage(client_FD, menu); // Send the menu to the client
@@ -28,7 +29,7 @@ int RequestService::startConversation(int client_FD){
         int choice = 0;
         try{
             choice = std::stoi(buffer);
-            if(choice < 1 || choice > 10){
+            if(choice < 0 || choice > 10){
                 throw std::invalid_argument("Invalid choice");
             }
         }catch(std::invalid_argument& e){

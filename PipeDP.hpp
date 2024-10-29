@@ -1,5 +1,5 @@
-#ifndef PIPELINEDP_HPP
-#define PIPELINEDP_HPP
+#ifndef PIPEDP_HPP
+#define PIPEDP_HPP
 
 #include <vector>
 #include <memory>
@@ -9,7 +9,7 @@
 #include "ActiveObjectDP.hpp"
 #include "FunctionQueue.hpp"
 
-class PipelineDP : public RequestService {
+class PipeDP : public RequestService {
 private:
     std::vector<std::unique_ptr<ActiveObjectDP>> stages;
     std::mutex pipeMtx;
@@ -19,8 +19,8 @@ private:
     void validateTaskExecution();
 
 public:
-    PipelineDP();
-    ~PipelineDP();
+    PipeDP();
+    ~PipeDP();
     void handleRequest(int client_FD) override;
     void setStageWorkStatus(bool status);
 };

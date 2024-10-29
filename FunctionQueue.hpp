@@ -20,8 +20,9 @@ public:
     bool dequeueAndExecute();
     
     // Check if queue is empty
-    bool isEmpty() const { return funcQueue.empty(); }
+    bool isEmpty() const ;
 
+    void clear();
 private:
     // Store both the function and its arguments
     struct FunctionData {

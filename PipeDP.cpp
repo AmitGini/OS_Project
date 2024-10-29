@@ -1,16 +1,16 @@
-#include "PipelineDP.hpp"
+#include "PipeDP.hpp"
 
-PipelineDP::PipelineDP() : stageWorking(false) {
+PipeDP::PipeDP() : stageWorking(false) {
     setupPipeline();
 }
 
-PipelineDP::~PipelineDP() {
+PipeDP::~PipeDP() {
     if (this->graph) {
         delete this->graph;
     }
 }
 
-void PipelineDP::setupPipeline() {
+void PipeDP::setupPipeline() {
     // Create 4 stages
     for(int i = 0; i < 5; i++) {
         stages.push_back(std::make_unique<ActiveObjectDP>());
@@ -48,7 +48,7 @@ void PipelineDP::setupPipeline() {
     });
 }
 
-void PipelineDP::handleRequest(int client_FD) {
+void PipeDP::handleRequest(int client_FD) {
     while (true) {
         int choice = startConversation(client_FD);
         
@@ -79,7 +79,7 @@ void PipelineDP::handleRequest(int client_FD) {
     }
 }
 
-void PipelineDP::validateTaskExecution() {
+void PipeDP::validateTaskExecution() {
     
     for(int i = 3; i >= 0; i--) {
         std::cout<<"************* Stage "<<i<<" *************"<<std::endl;
@@ -93,7 +93,7 @@ void PipelineDP::validateTaskExecution() {
     }
 }
 
-void PipelineDP::setStageWorkStatus(bool status) {
+void PipeDP::setStageWorkStatus(bool status) {
      std::cout<<"Pipe Updated Working Status From: "<<this->stageWorking<<" To: "<<status<<std::endl; 
     this->stageWorking = status;
 }

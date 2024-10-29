@@ -1,5 +1,5 @@
 #include "ActiveObjectDP.hpp"
-#include "PipelineDP.hpp"
+#include "PipeDP.hpp"
 
 ActiveObjectDP::ActiveObjectDP() : working(false), prevStageStatus(false), nextStage(nullptr) {
     activeObjectThread = std::make_unique<std::thread>(&ActiveObjectDP::work, this);
@@ -27,7 +27,7 @@ void ActiveObjectDP::setTaskHandler(FunctionQueue::FuncType handler) {
 
 void ActiveObjectDP::enqueue(int arg1, int arg2) {
     if (currentHandler) {
-        functionQueue.enqueue(currentHandler, arg1, arg2);
+        tasksQueue.enqueue(currentHandler, arg1, arg2);
     }
 }
 
@@ -35,7 +35,7 @@ void ActiveObjectDP::work() {
     bool success = false;
     while (!stop) {
         
-        if (functionQueue.isEmpty()) {
+        if (tasksQueue.isEmpty()) {
             this->working = false;
             this->activeTask_condition.notify_all();
 
@@ -43,7 +43,7 @@ void ActiveObjectDP::work() {
             std::cout<<"Stage Is Sleeping"<<std::endl;
 
             activeTask_condition.wait(lock, [this] {
-                return (!functionQueue.isEmpty() && this->prevStageStatus) || stop;
+                return (!tasksQueue.isEmpty() && this->prevStageStatus) || stop;
             });
             
             std::cout<<"Stage has Woke up"<<std::endl;
@@ -57,7 +57,7 @@ void ActiveObjectDP::work() {
         }else if(!stop){
             std::unique_lock<std::mutex> lock(activeTask_mutex);
             this->working = true;
-            success = functionQueue.dequeueAndExecute();
+            success = tasksQueue.dequeueAndExecute();
             if (success) {
                 this->updateNextStage(success);
                 std::cout<<"Has Stage Executed? "<< success <<std::endl;
@@ -78,9 +78,9 @@ void ActiveObjectDP::updateNextStage(bool status) {
 }
 
 void ActiveObjectDP::notify() {
-    if (functionQueue.isEmpty() || this->working || !this->prevStageStatus) {
+    if (tasksQueue.isEmpty() || this->working || !this->prevStageStatus) {
         std::cout<<"Didnt Notify Stage"<<std::endl;
-        std::cout<<"Function Queue Empty: "<<functionQueue.isEmpty()<<std::endl;
+        std::cout<<"Function Queue Empty: "<<tasksQueue.isEmpty()<<std::endl;
         std::cout<<"Working: "<<this->working<<std::endl;
         std::cout<<"Prev Stage Status: "<<this->prevStageStatus<<std::endl;
         return;
@@ -95,7 +95,7 @@ bool ActiveObjectDP::isWorking() {
     return this->working;
 }
 
-void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipelineDP *pipe) {
+void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
     if (this->working) {
     std::unique_lock<std::mutex> lock_pipe(pipeMtx);
     std::cout<<"Stage is Working"<<std::endl;

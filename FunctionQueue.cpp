@@ -28,3 +28,11 @@ bool FunctionQueue::dequeueAndExecute() {
     std::cout<<"Function dequeued and executed"<<std::endl;
     return data.func(data.arg1, data.arg2); // Execute the function with stored arguments
 }
+
+bool FunctionQueue::isEmpty() const{ return funcQueue.empty(); }
+
+void FunctionQueue::clear() {
+    while (!funcQueue.empty()) {
+        funcQueue.pop();
+    }
+}

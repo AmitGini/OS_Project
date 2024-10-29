@@ -10,8 +10,8 @@
 #include <arpa/inet.h>
 #include <vector>
 #include "RequestService.hpp"
-#include "PipelineDP.hpp"
-// #include "LeaderFollowerDP.hpp"
+#include "PipeDP.hpp"
+#include "LeaderFollowerDP.hpp"
 
 #define PORT 4040
 
@@ -19,7 +19,7 @@ class Server {
     
     private:
         RequestService* patternType;
-        //LeaderFollowerDP* leaderFollower;
+        LeaderFollowerDP* leaderFollower;
         struct sockaddr_in address;
         int server_fd, new_socket, addrlen;;
         std::vector<int> client_sockets;

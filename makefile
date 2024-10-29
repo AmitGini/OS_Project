@@ -1,18 +1,10 @@
 # Makefile for building the Graph-related project
 
-# OBJECTS:  LeaderFollowerDP.o
-# pcoverage:	gcov ActiveObjectDP.cpp -o .
-# lfcoverage:	gcov LeaderFollowerDP.cpp -o .
-# LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp
-#	 $(CXX) $(CXXFLAGS) -c $< -o $@
-# main.o LeaderFollowerDP.hpp
-
-
 # Compiler settings
 CXX = g++
 CXXFLAGS = -g -std=c++17
 COVFLAGS = -fprofile-arcs -ftest-coverage
-OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipelineDP.o ActiveObjectDP.o FunctionQueue.o
+OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o FunctionQueue.o
 
 # Default target
 all: graph
@@ -31,9 +23,11 @@ pcoverage: graph
 	gcov PrimStrategy.cpp -o .
 	gcov Server.cpp -o .
 	gcov RequestService.cpp -o .
-	gcov PipelineDP.cpp -o .
+	gcov PipeDP.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
 	gcov FunctionQueue.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov LeaderFollowerDP.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 
@@ -47,9 +41,10 @@ lfcoverage: graph
 	gcov PrimStrategy.cpp -o .
 	gcov Server.cpp -o .
 	gcov RequestService.cpp -o .
-	gcov PipelineDP.cpp -o .
+	gcov PipeDP.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
 	gcov FunctionQueue.cpp -o .
+	gcov LeaderFollowerDP.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 	
@@ -58,7 +53,7 @@ valgrind: graph
 	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -l >> valgrind_output_LF.txt 2>&1
 
 # Rule to compile the source files
-main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipelineDP.hpp
+main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipeDP.hpp LeaderFollowerDP.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 Graph.o: Graph.cpp Graph.hpp
@@ -76,11 +71,13 @@ Server.o: Server.cpp Server.hpp
 RequestService.o: RequestService.cpp RequestService.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ActiveObjectDP.o: ActiveObjectDP.cpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+ActiveObjectDP.o: ActiveObjectDP.cpp PipeDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+PipeDP.o: PipeDP.cpp RequestService.hpp PipeDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-PipelineDP.o: PipelineDP.cpp RequestService.hpp PipelineDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp FunctionQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 FunctionQueue.o: FunctionQueue.cpp FunctionQueue.hpp

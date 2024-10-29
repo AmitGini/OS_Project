@@ -6,10 +6,10 @@ Server::Server(bool isPipelineDP): patternType(nullptr) ,addrlen(sizeof(this->ad
     std::cout<<"Start Building the Server..."<<std::endl;
     if(isPipelineDP){
         std::cout<<"Starting Pipeline Design Pattern"<<std::endl;
-        this->patternType = new PipelineDP();
+        this->patternType = new PipeDP();
     }else{
-        // std::cout<<"Starting Leader Follower Design Pattern"<<std::endl;
-        // this->patternType = new LeaderFollowerDP();
+        std::cout<<"Starting Leader Follower Design Pattern"<<std::endl;
+        this->patternType = new LeaderFollowerDP();
     }
 }
 

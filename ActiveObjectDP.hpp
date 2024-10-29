@@ -7,11 +7,11 @@
 #include <atomic>
 #include "FunctionQueue.hpp"
 
-class PipelineDP;
+class PipeDP;
 
 class ActiveObjectDP {
 private:
-    FunctionQueue functionQueue;
+    FunctionQueue tasksQueue;
     std::mutex activeTask_mutex;
     std::condition_variable activeTask_condition;
     std::unique_ptr<std::thread> activeObjectThread;
@@ -33,6 +33,6 @@ public:
     void updateNextStage(bool status);
     void notify();
     bool isWorking();
-    void makePipeWait(std::mutex &pipeMtx, PipelineDP *pipe);
+    void makePipeWait(std::mutex &pipeMtx, PipeDP *pipe);
 };
 #endif

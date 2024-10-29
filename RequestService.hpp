@@ -20,12 +20,13 @@
 // Abstract class providing an interface for request handling services.
 class RequestService {
 protected:
+    bool isLeaderDP;  // Flag to determine if the current instance is the leader
     std::mutex graphMutex;  // Mutex for graph operations
     Graph* graph;  // Pointer to a Graph object
     char buffer[1024];  // Buffer for reading and writing data
 
 public:
-    RequestService() : graph(nullptr) {}
+    RequestService() : graph(nullptr),  isLeaderDP(false){}
 
     // Virtual destructor to ensure proper cleanup in derived classes
     virtual ~RequestService() = default;
