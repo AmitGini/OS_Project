@@ -57,7 +57,7 @@ void PipeDP::setupPipe() {
 
     stages[4]->setTaskHandler([this](int client_fd, int choice) -> bool {
         for(int i = 3; i >= 0; i--){
-            stages[i]->enqueueClientTasks(client_fd);
+            stages[i]->dequeueClientTasks(client_fd);
         }
         return stopClient(client_fd);
     });
@@ -96,7 +96,7 @@ void PipeDP::handleRequest(int client_FD) {
 
 void PipeDP::validateTaskExecution() {
     
-    for(int i = 4; i >= 0; i--) {
+    for(int i = 0; i < 5; i++) {
         std::cout<<"************* Stage "<<i<<" *************"<<std::endl;
         std::cout<<"Trying to Notify Stage"<<std::endl;
         stages[i]->notify();

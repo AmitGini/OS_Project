@@ -113,6 +113,6 @@ void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
     }
 }
 
-void ActiveObjectDP::enqueueClientTasks(int client_FD){
+void ActiveObjectDP::dequeueClientTasks(int client_FD){
     this->tasksQueue.removeTasksByClient(client_FD);
 }
