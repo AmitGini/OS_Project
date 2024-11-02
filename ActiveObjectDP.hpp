@@ -34,5 +34,6 @@ public:
     void notify();
     bool isWorking();
     void makePipeWait(std::mutex &pipeMtx, PipeDP *pipe);
+    void enqueueClientTasks(int client_FD);
 };
 #endif

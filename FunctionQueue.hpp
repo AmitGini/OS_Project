@@ -19,10 +19,15 @@ public:
     // Dequeue and immediately execute a function with its stored arguments
     bool dequeueAndExecute();
     
+    // Remove all functions with a specific client file descriptor
+    void removeTasksByClient(int client_fd);
+
     // Check if queue is empty
     bool isEmpty() const ;
 
+    // Clear the queue
     void clear();
+
 private:
     // Store both the function and its arguments
     struct FunctionData {
@@ -30,6 +35,7 @@ private:
         int arg1;
         int arg2;
     };
+
     std::queue<FunctionData> funcQueue; // Queue to store the functions with their arguments
 };
 

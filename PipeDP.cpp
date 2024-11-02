@@ -1,28 +1,36 @@
 #include "PipeDP.hpp"
 
 PipeDP::PipeDP() : stageWorking(false) {
-    setupPipeline();
+    setupPipe();
 }
 
 PipeDP::~PipeDP() {
+    std::cout<<"Deleting PipeDP"<<std::endl;
+    for(auto& stage : stages) {
+        // Reset the unique pointer, so that the memory is released and the destructor of the object is called.
+        stage.reset();
+    }
+    
     if (this->graph) {
         delete this->graph;
     }
 }
 
-void PipeDP::setupPipeline() {
+void PipeDP::setupPipe() {
     // Create 4 stages
     for(int i = 0; i < 5; i++) {
         stages.push_back(std::make_unique<ActiveObjectDP>());
     }
     
     // Set up the pipeline connections
-    stages[0]->setNextStage(stages[1].get());
-    stages[1]->setNextStage(stages[2].get());
-    stages[2]->setNextStage(stages[3].get());
-    stages[3]->setNextStage(stages[4].get());
-    stages[4]->setNextStage(stages[0].get());  // Extra stage to close the loop - Wont be able to enqueue tasks.
+    stages[0]->setNextStage(stages[1].get());  // stage to handle graph creation
+    stages[1]->setNextStage(stages[2].get());  // stage to handle graph modification
+    stages[2]->setNextStage(stages[3].get());  // stage to handle MST calculation
+    stages[3]->setNextStage(stages[3].get());  // stage to handle MST operations
+    stages[4]->setNextStage(stages[4].get());  // stage to handle client exit
+    
     stages[0]->setPrevStageStatus(true);
+    stages[4]->setPrevStageStatus(true);
 
     // Define task handlers for each stage
     stages[0]->setTaskHandler([this](int client_fd, int choice) -> bool {
@@ -45,6 +53,13 @@ void PipeDP::setupPipeline() {
     stages[3]->setTaskHandler([this](int client_fd, int choice) -> bool {
         getMSTData(client_fd, choice);
         return true;
+    });
+
+    stages[4]->setTaskHandler([this](int client_fd, int choice) -> bool {
+        for(int i = 3; i >= 0; i--){
+            stages[i]->enqueueClientTasks(client_fd);
+        }
+        return stopClient(client_fd);
     });
 }
 
@@ -71,24 +86,22 @@ void PipeDP::handleRequest(int client_FD) {
                 stages[3]->enqueue(client_FD, choice);
                 break;
             case 10: // Exit
-                close(client_FD);
+                stages[4]->enqueue(client_FD, choice);
                 return;
         }
-
+        
         validateTaskExecution();
     }
 }
 
 void PipeDP::validateTaskExecution() {
     
-    for(int i = 3; i >= 0; i--) {
+    for(int i = 4; i >= 0; i--) {
         std::cout<<"************* Stage "<<i<<" *************"<<std::endl;
         std::cout<<"Trying to Notify Stage"<<std::endl;
         stages[i]->notify();
-        
-        if(i != 3) {
-            stages[i]->makePipeWait(this->pipeMtx, this);
-        }
+        if(i < 3)stages[i]->makePipeWait(this->pipeMtx, this);
+
         std::cout<<"************************************"<<std::endl;
     }
 }

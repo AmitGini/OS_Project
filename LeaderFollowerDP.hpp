@@ -20,7 +20,7 @@ private:
     std::condition_variable cv;
     std::atomic<int> leaderIndex;
     std::atomic<bool> stop{false};
-    int clientFD;
+    int client_fd;
 
     // Inhertied function to be implemented by derived classes to handle requests
     void handleRequest(int client_FD) override;
@@ -33,12 +33,13 @@ public:
     // Promotes a follower to leader
     void promoteFollower(int follower);
 
-    bool enqueingChoices(int choice);
-
     void tasksEnqueing();
 
     void tasksExecution();
  
+    bool enqueingChoices(int choice);
+
+    void enqueueClientTasks(int client_FD);
 };
 
 #endif 

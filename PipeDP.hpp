@@ -15,7 +15,7 @@ private:
     std::mutex pipeMtx;
     bool stageWorking;
 
-    void setupPipeline();
+    void setupPipe();
     void validateTaskExecution();
 
 public:

@@ -60,6 +60,19 @@
         "iostream": "cpp",
         "queue": "cpp",
         "future": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "bitset": "cpp",
+        "charconv": "cpp",
+        "deque": "cpp",
+        "forward_list": "cpp",
+        "set": "cpp",
+        "istream": "cpp",
+        "semaphore": "cpp",
+        "sstream": "cpp",
+        "stop_token": "cpp",
+        "__node_handle": "cpp",
+        "__tree": "cpp",
+        "print": "cpp",
+        "__hash_table": "cpp"
     }
 }

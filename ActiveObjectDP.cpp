@@ -10,8 +10,11 @@ ActiveObjectDP::~ActiveObjectDP() {
         std::unique_lock<std::mutex> lock(activeTask_mutex);
         stop = true;
     }
-    
-    activeTask_condition.notify_one();
+    // Clear the queue and notify the thread
+    tasksQueue.clear();
+    activeTask_condition.notify_all();
+
+    // Join the thread
     if (activeObjectThread && activeObjectThread->joinable()) {
         activeObjectThread->join();
     }
@@ -100,6 +103,7 @@ void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
     std::unique_lock<std::mutex> lock_pipe(pipeMtx);
     std::cout<<"Stage is Working"<<std::endl;
     pipe->setStageWorkStatus(true);
+    
     activeTask_condition.wait(lock_pipe, [this] { return !this->isWorking(); });
     pipe->setStageWorkStatus(false);
     std::cout<<"A Stage Finished its work"<<std::endl;
@@ -107,4 +111,8 @@ void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
         pipe->setStageWorkStatus(false);
         std::cout<<"Stage is not working"<<std::endl;
     }
+}
+
+void ActiveObjectDP::enqueueClientTasks(int client_FD){
+    this->tasksQueue.removeTasksByClient(client_FD);
 }

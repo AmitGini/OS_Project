@@ -20,6 +20,7 @@ public:
     int getSizeVertices() const;  // Get number of vertices
     int getNumEdges() const;  // Get number of edges
     const std::vector<std::vector<int>> &getGraph() const;  // Get adjacency matrix
+    bool hasMST() const;  // Check if MST has been computed
     
     // MST Graph Functions - after activate MST Algorithm
     void setMST(std::vector<std::vector<int>>* mst);  // Set adjacency matrix - MST representations
@@ -34,7 +35,7 @@ private:
     int numEdges;
     std::vector<std::vector<int>> adjMatrix;  // Adjacency matrix - graph representations
     std::vector<std::vector<int>>* mstMatrix;  // Adjacency matrix - MST representations
-
+    bool hasUpdatedMST;  // Flag to check if MST has been updated
 };
 
 #endif

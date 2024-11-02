@@ -9,7 +9,7 @@ If the leader is done with the conversation, the follower will be promoted to le
 If the leader is done execute all the tasks and queue is empty or cant preform the task, the follower will be promoted to leader.
 */
 
-LeaderFollowerDP::LeaderFollowerDP() : leaderIndex(-1), clientFD(-1) {
+LeaderFollowerDP::LeaderFollowerDP() : leaderIndex(-1), client_fd(-1) {
     this->threadsPool.push_back(std::thread(&LeaderFollowerDP::tasksEnqueing, this));
     this->threadsPool.push_back(std::thread(&LeaderFollowerDP::tasksExecution, this));
     std::cout<<"Created Threades"<<std::endl;
@@ -21,7 +21,10 @@ LeaderFollowerDP::~LeaderFollowerDP() {
         this->stop = true;
     }
 
-    this->cv.notify_all();
+    tasksQueue.clear();  // Clear the queue
+    this->cv.notify_all();  // Notify all threads to stop
+    
+    // Join all threads
     for(auto& thread : this->threadsPool) {
         if(thread.joinable()) {
             thread.join();
@@ -49,17 +52,16 @@ void LeaderFollowerDP::tasksEnqueing(){
             break;
         }
 
-        if(this->clientFD == -1){
+        if(this->client_fd == -1){
             std::cout<<"\nClient has Exited, No Leader to Promote"<<std::endl;
             promoteFollower(NO_LEADER);
             continue;
         }
 
-
         std::cout<<"Starting Conversation...\n"<<std::endl;
-        int choice = this->startConversation(this->clientFD);
+        int choice = this->startConversation(this->client_fd);
         if(enqueingChoices(choice)) continue;
-
+        
         std::cout<<"\nExecution Cases Activated"<<std::endl;
         std::cout<<"Promoting Follower to Execute Tasks\n"<<std::endl;
         promoteFollower(TASKS);
@@ -72,18 +74,18 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
         case 1: // Create graph
             //define task to add to the equeue
             func = [this](int client_fd, int choice) -> bool {return createGraph(client_fd);};
-            this->tasksQueue.enqueue(func , this->clientFD, choice); // add the func to queue with the proper arguments
+            this->tasksQueue.enqueue(func , this->client_fd, choice); // add the func to queue with the proper arguments
             break;
         
         case 2: // Add edge
         case 3: // Remove edge
             func = [this](int client_fd, int choice) -> bool {return modifyGraph(client_fd, choice == 2);};
-            this->tasksQueue.enqueue(func , this->clientFD, choice);
+            this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
 
         case 4: // Calculate MST
             func = [this](int client_fd, int choice) -> bool {return calculateMST(client_fd);};
-            this->tasksQueue.enqueue(func , this->clientFD, choice);
+            this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
 
         case 5: // MST operations
@@ -91,24 +93,29 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
         case 7:
         case 8:
         case 9:
-            func = [this](int client_fd, int choice) -> bool {getMSTData(client_fd, choice); return true;};
-            this->tasksQueue.enqueue(func , this->clientFD, choice);
+            func = [this](int client_fd, int choice) -> bool {return getMSTData(client_fd, choice);};
+            this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
         
-        case 10:
-            close(clientFD);
+        case 10: // Client Exit
+            func = [this](int client_fd, int choice) -> bool {this->enqueueClientTasks(client_fd); this->stopClient(client_fd); return true;};
+            this->tasksQueue.enqueue(func , this->client_fd, choice);
             return false;
             
         case 0: // Start Executing the tasks
             return false;
 
         default:
-            sendMessage(this->clientFD, "Invalid choice. Please try again.\n");
+            sendMessage(this->client_fd, "Invalid choice. Please try again.\n");
             return true;
     }
 
     std::cout<<"Task Added"<<std::endl;
     return true;
+}
+
+void LeaderFollowerDP::enqueueClientTasks(int client_FD){
+    this->tasksQueue.removeTasksByClient(client_FD);
 }
 
 void LeaderFollowerDP::tasksExecution(){
@@ -124,7 +131,7 @@ void LeaderFollowerDP::tasksExecution(){
             break;
         }
 
-        if(this->clientFD == -1){
+        if(this->client_fd < 0){
             std::cout<<"\nClient has Exited, No Leader to Promote"<<std::endl;
             this->tasksQueue.clear();
             promoteFollower(NO_LEADER);
@@ -134,7 +141,7 @@ void LeaderFollowerDP::tasksExecution(){
         std::cout<<"Executing Tasks...\n"<<std::endl;
         bool success = this->tasksQueue.dequeueAndExecute();
         if(!success){
-            sendMessage(this->clientFD, "Task execution failed. Make sure to add task according to Healthy Logic.\n");
+            sendMessage(this->client_fd, "Task execution failed. Make sure to add task according to Healthy Logic.\n");
             std::cout<<"Task Execution Failed, dequeue and continue to next tasks"<<std::endl;
         }
 
@@ -146,7 +153,8 @@ void LeaderFollowerDP::tasksExecution(){
 }
 
 void LeaderFollowerDP::handleRequest(int client_FD) {
-    std::cout<<"Handle Request Activated Due Connection With A Client"<<std::endl;
-    this->clientFD = client_FD;
+    std::cout<<"Handle Request Connection With A Client"<<std::endl;
+    this->client_fd = client_FD;
     promoteFollower(CONVERSATION);
+
 }

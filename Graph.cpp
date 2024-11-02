@@ -2,7 +2,7 @@
 
 
 // Constructor
-Graph::Graph(int vertices) : numVertices(vertices), numEdges(0),
+Graph::Graph(int vertices) : numVertices(vertices), numEdges(0), hasUpdatedMST(false),
 adjMatrix(vertices, std::vector<int>(vertices, 0)), mstMatrix(nullptr) {}
 
 // Destructor
@@ -19,11 +19,13 @@ void Graph::addEdge(int u, int v, int weight){
     else if(this->adjMatrix[u][v] != 0 || this->adjMatrix[v][u] != 0){
         this->adjMatrix[u][v] = weight;
         this->adjMatrix[v][u] = weight; // Assuming undirected graph
+        this->hasUpdatedMST = false;
         return;
     }else{
         this->adjMatrix[u][v] = weight;
         this->adjMatrix[v][u] = weight; // Assuming undirected graph
         this->numEdges++;
+        this->hasUpdatedMST = false;
     }
 }
 
@@ -38,6 +40,7 @@ void Graph::removeEdge(int u, int v){
         this->adjMatrix[u][v] = 0;
         this->adjMatrix[v][u] = 0;
         this->numEdges--;
+        this->hasUpdatedMST = false;
     }
 }
 
@@ -61,23 +64,27 @@ const std::vector<std::vector<int>> &Graph::getGraph() const{
     return this->adjMatrix;
 }
 
+bool Graph::hasMST() const{
+    return this->hasUpdatedMST;
+}
+
 // Set adjacency matrix represent the MST
 void Graph::setMST(std::vector<std::vector<int>>* mst){
     if(mst == nullptr){
-        //throw std::runtime_error("Invalid matrix size");
         return;
-    }else if(mstMatrix != nullptr){
+    }else if(this->mstMatrix != nullptr){
         delete this->mstMatrix;
         this->mstMatrix = nullptr;
     }
 
     this->mstMatrix = mst;
+    this->hasUpdatedMST = true;
 }
 
 // Calculate and return the total weight of MST
 int Graph::getMSTTotalWeight() const
 {
-    if(this->mstMatrix == nullptr){
+    if(!this->hasUpdatedMST){
         std::cerr << "MST matrix is not set\n";
         return 0;
     }
@@ -93,7 +100,7 @@ int Graph::getMSTTotalWeight() const
 
 // Return the highest weighted distance in the MST
 int Graph::getMSTLongestDistance() const {
-    if (this->mstMatrix == nullptr) {
+    if (!this->hasUpdatedMST) {
         std::cerr << "MST matrix is not set\n";
         return 0;
     }
@@ -133,7 +140,7 @@ int Graph::getMSTLongestDistance() const {
 
 //Return the average edge weight in the MST
 double Graph::getMSTAvgEdgeWeight() const{
-    if(this->mstMatrix == nullptr){
+    if(!this->hasUpdatedMST){
         std::cerr << "MST matrix is not set\n";
         return 0.0;
     }
@@ -158,7 +165,7 @@ double Graph::getMSTAvgEdgeWeight() const{
 }
 
 int Graph::getMSTShortestDistance() const {
-    if (this->mstMatrix == nullptr) {
+    if (!this->hasUpdatedMST) {
         std::cerr << "MST matrix is not set\n";
         return 0;
     }
@@ -197,7 +204,7 @@ int Graph::getMSTShortestDistance() const {
 }
 
 std::string Graph::printMST() const {
-    if(this->mstMatrix == nullptr){
+    if(!this->hasUpdatedMST){
         return "MST matrix is not set\n";
     }
 

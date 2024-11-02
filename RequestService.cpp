@@ -74,6 +74,7 @@ bool RequestService::createGraph(int client_FD){
     sendMessage(client_FD, message);
     return true;
 }
+
 // Add edge to the graph conversation
 bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
     std::lock_guard<std::mutex> lock(graphMutex);
@@ -186,12 +187,16 @@ bool RequestService::calculateMST(int client_FD) {
 }
 
 // Get MST data based on choice
-void RequestService::getMSTData(int client_FD, int choice) {
+bool RequestService::getMSTData(int client_FD, int choice) {
     std::lock_guard<std::mutex> lock(graphMutex);
     if(this->graph == nullptr){
         std::string message = "Graph is not created. Please create a graph first.\n";
         sendMessage(client_FD, message);
-        return;
+        return false;
+    }else if(!this->graph->hasMST()){
+        std::string message = "MST is not computed. Please compute MST first.\n";
+        sendMessage(client_FD, message);
+        return false;
     }
 
     std::string message;
@@ -227,10 +232,20 @@ void RequestService::getMSTData(int client_FD, int choice) {
             break;
         }
         default: {
-            message = "Invalid choice.\n";
-            break;
+            message = "Invalid choice for Data of the MST.\n";
+            sendMessage(client_FD, message);
+            return false;
         }
     }
     sendMessage(client_FD, message);
+    return true;
 }
 
+bool RequestService::stopClient(int client_FD){
+    if(client_FD >= 0){
+        std::string message = "\nIts not you its me, Bye Bye.";
+        sendMessage(client_FD, message);
+        close(client_FD);
+    }
+    return true;
+}
