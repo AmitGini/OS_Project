@@ -34,10 +34,7 @@ int main(int argc, char* argv[]) {
     }
     
     Server* serverObj = pipelineFlag ? new Server(true) : new Server(false);
-    
-    if(serverObj){
-        delete serverObj;
-    }
+    delete serverObj;
 
     return 0;
 }

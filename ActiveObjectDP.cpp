@@ -22,15 +22,17 @@ ActiveObjectDP::~ActiveObjectDP() {
 
 void ActiveObjectDP::setNextStage(ActiveObjectDP* next) {
     this->nextStage = next;
+    if(nextStage == this) this->prevStageStatus = true;
 }
 
-void ActiveObjectDP::setTaskHandler(FunctionQueue::FuncType handler) {
+void ActiveObjectDP::setTaskHandler(TaskQueue::TaskType handler) {
     this->currentHandler = handler;
 }
 
-void ActiveObjectDP::enqueue(int arg1, int arg2) {
+void ActiveObjectDP::enqueue(int& arg1, int arg2) {
     if (currentHandler) {
         tasksQueue.enqueue(currentHandler, arg1, arg2);
+        notify();
     }
 }
 
@@ -55,15 +57,13 @@ void ActiveObjectDP::work() {
             success = false;
             this->working = false;
             this->updateNextStage(success);
-            std::cout<<" Update Next Stage That I Am Not Ready"<<std::endl;
         
         }else if(!stop){
             std::unique_lock<std::mutex> lock(activeTask_mutex);
             this->working = true;
-            success = tasksQueue.dequeueAndExecute();
+            success = tasksQueue.executeTask();
             if (success) {
                 this->updateNextStage(success);
-                std::cout<<"Has Stage Executed? "<< success <<std::endl;
             }
 
         } else return;  // Stop the thread
@@ -71,48 +71,54 @@ void ActiveObjectDP::work() {
 }
 
 void ActiveObjectDP::setPrevStageStatus(bool status) {
-    this->prevStageStatus = status;
+    if(this->nextStage && this->nextStage == this) return;  // The exit stage it its own next stage
+    this->prevStageStatus = status;  // My next stage ask my status (I am the previous stage of my Next Stage)
 }
 
 void ActiveObjectDP::updateNextStage(bool status) {
-    if (!nextStage) return;
+    if (this->nextStage && this->nextStage == this) return;
     this->nextStage->setPrevStageStatus(status);
-    if (status) nextStage->notify();
+    std::cout<<"********Notifying Next Stage********"<<std::endl;    
+    nextStage->notify();
 }
 
 void ActiveObjectDP::notify() {
-    if (tasksQueue.isEmpty() || this->working || !this->prevStageStatus) {
-        std::cout<<"Didnt Notify Stage"<<std::endl;
-        std::cout<<"Function Queue Empty: "<<tasksQueue.isEmpty()<<std::endl;
-        std::cout<<"Working: "<<this->working<<std::endl;
-        std::cout<<"Prev Stage Status: "<<this->prevStageStatus<<std::endl;
-        return;
+    if(this->nextStage && this->nextStage == this && tasksQueue.isEmpty()){
+        std::cout<<"******Client has Disconnected******"<<std::endl;
     }
-
-    this->working = true;
-    std::cout<<"Notified Stage Executed"<<std::endl;
-    this->activeTask_condition.notify_all();
+    else if (tasksQueue.isEmpty() || this->working || !this->prevStageStatus) {
+        std::cout<<"**** Failed to Notify The Stage Due: ****"<<std::endl;
+        int queueSize = tasksQueue.size();
+        std::cout<<"1. Number of Tasks in Queue: "<<queueSize<<std::endl;
+        std::string message = this->working ? "True" : "False";
+        std::cout<<"2. Working: "<<message<<std::endl;
+        message = this->prevStageStatus ? "True" : "False";
+        std::cout<<"3. Prev Stage Completed: "<<message<<std::endl;
+    }else{
+        this->working = true;
+        std::cout<<"Notify Stage"<<std::endl;
+        this->activeTask_condition.notify_all();
+        sleep(0.5);  // Sleep for 1 second
+    }
 }
 
-bool ActiveObjectDP::isWorking() {
+bool ActiveObjectDP::isActive() {
     return this->working;
 }
 
 void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
     if (this->working) {
+
     std::unique_lock<std::mutex> lock_pipe(pipeMtx);
     std::cout<<"Stage is Working"<<std::endl;
-    pipe->setStageWorkStatus(true);
-    
-    activeTask_condition.wait(lock_pipe, [this] { return !this->isWorking(); });
-    pipe->setStageWorkStatus(false);
+    pipe->setStageActiveStatus(true);
+
+    activeTask_condition.wait(lock_pipe, [this] { return !this->isActive(); });
+    pipe->setStageActiveStatus(false);
+
     std::cout<<"A Stage Finished its work"<<std::endl;
     } else {
-        pipe->setStageWorkStatus(false);
+        pipe->setStageActiveStatus(false);
         std::cout<<"Stage is not working"<<std::endl;
     }
-}
-
-void ActiveObjectDP::dequeueClientTasks(int client_FD){
-    this->tasksQueue.removeTasksByClient(client_FD);
 }

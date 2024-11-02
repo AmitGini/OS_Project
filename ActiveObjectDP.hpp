@@ -5,13 +5,13 @@
 #include <condition_variable>
 #include <thread>
 #include <atomic>
-#include "FunctionQueue.hpp"
+#include "TaskQueue.hpp"
 
 class PipeDP;
 
 class ActiveObjectDP {
 private:
-    FunctionQueue tasksQueue;
+    TaskQueue tasksQueue;
     std::mutex activeTask_mutex;
     std::condition_variable activeTask_condition;
     std::unique_ptr<std::thread> activeObjectThread;
@@ -19,21 +19,20 @@ private:
     ActiveObjectDP* nextStage;
     bool prevStageStatus;
     bool working;
-    FunctionQueue::FuncType currentHandler;
+    TaskQueue::TaskType currentHandler;
     
     void work();
 
 public:
     ActiveObjectDP();
     ~ActiveObjectDP();
-    void enqueue(int arg1, int arg2);
+    void enqueue(int& arg1, int arg2);
     void setNextStage(ActiveObjectDP* next);
-    void setTaskHandler(FunctionQueue::FuncType handler);
+    void setTaskHandler(TaskQueue::TaskType handler);
     void setPrevStageStatus(bool status);
     void updateNextStage(bool status);
     void notify();
-    bool isWorking();
     void makePipeWait(std::mutex &pipeMtx, PipeDP *pipe);
-    void dequeueClientTasks(int client_FD);
+    bool isActive();
 };
 #endif

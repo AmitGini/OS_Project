@@ -1,12 +1,21 @@
 #include "RequestService.hpp"
 
+
 // Send a message to the client
-void RequestService::sendMessage(int client_fd, const std::string& message) {
-    send(client_fd, message.c_str(), message.size(), 0);
+void RequestService::sendMessage(int &client_FD, const std::string& message) {
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return;
+    }
+    send(client_FD, message.c_str(), message.size(), 0);
 }
 
 // Start the conversation with the client
-int RequestService::startConversation(int client_FD){
+int RequestService::startConversation(int &client_FD){
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return -1;
+    }
     std::string menu =
         "\nMenu:\n"
         "0. Execute Tasks      (LF ONLY!)\n"
@@ -42,7 +51,11 @@ int RequestService::startConversation(int client_FD){
 }
 
 // Create a new graph conversation
-bool RequestService::createGraph(int client_FD){
+bool RequestService::createGraph(int &client_FD){
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return false;
+    }
     std::lock_guard<std::mutex> lock(graphMutex);
     std::string message = "Enter the number of vertices: ";
     sendMessage(client_FD, message);
@@ -76,7 +89,12 @@ bool RequestService::createGraph(int client_FD){
 }
 
 // Add edge to the graph conversation
-bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
+bool RequestService::modifyGraph(int &client_FD, bool toAddEdge) {
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return false;
+    }
+
     std::lock_guard<std::mutex> lock(graphMutex);
     if(this->graph == nullptr){
         std::string message = "Graph is not created. Please create a graph first.\n";
@@ -126,7 +144,12 @@ bool RequestService::modifyGraph(int client_FD, bool toAddEdge) {
 }
 
 // Calculate MST conversation
-bool RequestService::calculateMST(int client_FD) {
+bool RequestService::calculateMST(int &client_FD) {
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return false;
+    }
+
     std::lock_guard<std::mutex> lock(graphMutex);
     if (this->graph == nullptr) {
         std::string message = "Graph is not created. Please create a graph first.\n";
@@ -187,7 +210,12 @@ bool RequestService::calculateMST(int client_FD) {
 }
 
 // Get MST data based on choice
-bool RequestService::getMSTData(int client_FD, int choice) {
+bool RequestService::getMSTData(int &client_FD, int choice) {
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return false;
+    }
+
     std::lock_guard<std::mutex> lock(graphMutex);
     if(this->graph == nullptr){
         std::string message = "Graph is not created. Please create a graph first.\n";
@@ -241,11 +269,17 @@ bool RequestService::getMSTData(int client_FD, int choice) {
     return true;
 }
 
-bool RequestService::stopClient(int client_FD){
+bool RequestService::stopClient(int &client_FD){
+    if(client_FD < 0) {
+        std::perror("Error: Invalid client file descriptor.");
+        return false;
+    }
+    
     if(client_FD >= 0){
         std::string message = "\nIts not you its me, Bye Bye.";
         sendMessage(client_FD, message);
         close(client_FD);
+        std::cout<<"Client Connection Closed"<<std::endl;
     }
     return true;
 }

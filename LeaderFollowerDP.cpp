@@ -69,22 +69,22 @@ void LeaderFollowerDP::tasksEnqueing(){
 }
 
 bool LeaderFollowerDP::enqueingChoices(int choice){
-    FunctionQueue::FuncType func;
+    TaskQueue::TaskType func;
     switch (choice) {
         case 1: // Create graph
             //define task to add to the equeue
-            func = [this](int client_fd, int choice) -> bool {return createGraph(client_fd);};
+            func = [this](int &client_fd, int choice) -> bool {return createGraph(client_fd);};
             this->tasksQueue.enqueue(func , this->client_fd, choice); // add the func to queue with the proper arguments
             break;
         
         case 2: // Add edge
         case 3: // Remove edge
-            func = [this](int client_fd, int choice) -> bool {return modifyGraph(client_fd, choice == 2);};
+            func = [this](int &client_fd, int choice) -> bool {return modifyGraph(client_fd, choice == 2);};
             this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
 
         case 4: // Calculate MST
-            func = [this](int client_fd, int choice) -> bool {return calculateMST(client_fd);};
+            func = [this](int &client_fd, int choice) -> bool {return calculateMST(client_fd);};
             this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
 
@@ -93,12 +93,12 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
         case 7:
         case 8:
         case 9:
-            func = [this](int client_fd, int choice) -> bool {return getMSTData(client_fd, choice);};
+            func = [this](int &client_fd, int choice) -> bool {return getMSTData(client_fd, choice);};
             this->tasksQueue.enqueue(func , this->client_fd, choice);
             break;
         
         case 10: // Client Exit
-            func = [this](int client_fd, int choice) -> bool {this->enqueueClientTasks(client_fd); this->stopClient(client_fd); return true;};
+            func = [this](int &client_fd, int choice) -> bool {this->stopClient(client_fd); return true;};
             this->tasksQueue.enqueue(func , this->client_fd, choice);
             return false;
             
@@ -112,10 +112,6 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
 
     std::cout<<"Task Added"<<std::endl;
     return true;
-}
-
-void LeaderFollowerDP::enqueueClientTasks(int client_FD){
-    this->tasksQueue.removeTasksByClient(client_FD);
 }
 
 void LeaderFollowerDP::tasksExecution(){
@@ -139,7 +135,7 @@ void LeaderFollowerDP::tasksExecution(){
         }
 
         std::cout<<"Executing Tasks...\n"<<std::endl;
-        bool success = this->tasksQueue.dequeueAndExecute();
+        bool success = this->tasksQueue.executeTask();
         if(!success){
             sendMessage(this->client_fd, "Task execution failed. Make sure to add task according to Healthy Logic.\n");
             std::cout<<"Task Execution Failed, dequeue and continue to next tasks"<<std::endl;
@@ -152,7 +148,7 @@ void LeaderFollowerDP::tasksExecution(){
     }
 }
 
-void LeaderFollowerDP::handleRequest(int client_FD) {
+void LeaderFollowerDP::handleRequest(int& client_FD) {
     std::cout<<"Handle Request Connection With A Client"<<std::endl;
     this->client_fd = client_FD;
     promoteFollower(CONVERSATION);

@@ -29,27 +29,27 @@ public:
     virtual ~RequestService() = default;
 
     // Pure virtual function to be implemented by derived classes to handle requests
-    virtual void handleRequest(int client_FD) = 0;
+    virtual void handleRequest(int& client_FD) = 0;
 
     // Sends a message to a client
-    void sendMessage(int client_fd, const std::string& message);
+    void sendMessage(int &client_FD, const std::string& message);
 
     // Initiates conversation with a client, presenting a menu and handling input
-    int startConversation(int client_FD);
+    int startConversation(int &client_FD);
 
     // Handles the creation of a new graph
-    bool createGraph(int client_FD);
+    bool createGraph(int &client_FD);
 
     // Modifies the graph by adding or removing an edge
-    bool modifyGraph(int client_FD, bool toAddEdge);
+    bool modifyGraph(int &client_FD, bool toAddEdge);
 
     // Calculates the MST using a chosen algorithm
-    bool calculateMST(int client_FD);
+    bool calculateMST(int &client_FD);
 
     // Fetches and sends data related to the MST based on client's choice
-    bool getMSTData(int client_FD, int choice);
+    bool getMSTData(int &client_FD, int choice);
 
     // Stops the client connection
-    bool stopClient(int client_FD);
+    bool stopClient(int &client_FD);
 };
 #endif

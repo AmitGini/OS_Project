@@ -4,7 +4,7 @@
 CXX = g++
 CXXFLAGS = -g -std=c++17
 COVFLAGS = -fprofile-arcs -ftest-coverage
-OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o FunctionQueue.o
+OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o TaskQueue.o
 
 # Default target
 all: graph
@@ -25,7 +25,7 @@ pcoverage: graph
 	gcov RequestService.cpp -o .
 	gcov PipeDP.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
-	gcov FunctionQueue.cpp -o .
+	gcov TaskQueue.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
 	gcov LeaderFollowerDP.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
@@ -43,7 +43,7 @@ lfcoverage: graph
 	gcov RequestService.cpp -o .
 	gcov PipeDP.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
-	gcov FunctionQueue.cpp -o .
+	gcov TaskQueue.cpp -o .
 	gcov LeaderFollowerDP.cpp -o .
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
@@ -71,16 +71,16 @@ Server.o: Server.cpp Server.hpp
 RequestService.o: RequestService.cpp RequestService.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ActiveObjectDP.o: ActiveObjectDP.cpp PipeDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+ActiveObjectDP.o: ActiveObjectDP.cpp PipeDP.hpp ActiveObjectDP.hpp TaskQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-PipeDP.o: PipeDP.cpp RequestService.hpp PipeDP.hpp ActiveObjectDP.hpp FunctionQueue.hpp
+PipeDP.o: PipeDP.cpp RequestService.hpp PipeDP.hpp ActiveObjectDP.hpp TaskQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp FunctionQueue.hpp
+LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp TaskQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-FunctionQueue.o: FunctionQueue.cpp FunctionQueue.hpp
+TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean up
