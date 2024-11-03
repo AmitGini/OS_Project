@@ -11,13 +11,13 @@
 
 class PipeDP : public RequestService {
 private:
+    // Private members
     std::vector<std::unique_ptr<ActiveObjectDP>> stages;
     std::mutex pipeMtx;
     bool isStageActive;
 
-    void setupPipe();
-    void validateTaskExecution(int &client_FD, int choice);
-
+    // Private methods
+    void setupPipe();  // Setup the pipe with active objects
 public:
     PipeDP();
     ~PipeDP();

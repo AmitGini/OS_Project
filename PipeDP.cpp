@@ -21,6 +21,7 @@ PipeDP::~PipeDP() {
     if (this->graph) {
         delete this->graph;
     }
+    std::cout<<"Pipe And Active Objects has Closed"<<std::endl;
 }
 
 void PipeDP::setupPipe() {
@@ -106,7 +107,6 @@ void PipeDP::handleRequest(int& client_FD) {
                 return;
         }
         
-
         for(auto& stage : stages) {
             if(stage->isActive()) {
                 stage->makePipeWait(this->pipeMtx, this);

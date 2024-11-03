@@ -146,8 +146,6 @@ void Server::acceptClientAccess(int client_socket){
         return;
     }
     
-    std::cout << "Accepted New Connection to the Program - New Client" << std::endl;
-    
     try {
         this->patternType->handleRequest(client_socket);
     } catch (const std::exception& e) {

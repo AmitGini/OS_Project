@@ -78,13 +78,13 @@ void ActiveObjectDP::setPrevStageStatus(bool status) {
 void ActiveObjectDP::updateNextStage(bool status) {
     if (this->nextStage && this->nextStage == this) return;
     this->nextStage->setPrevStageStatus(status);
-    std::cout<<"********Notifying Next Stage********"<<std::endl;    
+    std::cout<<"******** Notifying Next Stage ********"<<std::endl;    
     nextStage->notify();
 }
 
 void ActiveObjectDP::notify() {
     if(this->nextStage && this->nextStage == this && tasksQueue.isEmpty()){
-        std::cout<<"******Client has Disconnected******"<<std::endl;
+        std::cout<<"****** Client has Disconnected ******"<<std::endl;
     }
     else if (tasksQueue.isEmpty() || this->working || !this->prevStageStatus) {
         std::cout<<"**** Failed to Notify The Stage Due: ****"<<std::endl;
@@ -116,7 +116,7 @@ void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
     activeTask_condition.wait(lock_pipe, [this] { return !this->isActive(); });
     pipe->setStageActiveStatus(false);
 
-    std::cout<<"A Stage Finished its work"<<std::endl;
+    std::cout<<"Stage Finished its work"<<std::endl;
     } else {
         pipe->setStageActiveStatus(false);
         std::cout<<"Stage is not working"<<std::endl;

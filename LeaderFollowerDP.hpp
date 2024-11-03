@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <optional>
 #include <atomic>
 #include "TaskQueue.hpp"
 #include "RequestService.hpp"
@@ -14,24 +15,36 @@
 class LeaderFollowerDP : public RequestService {
 
 private:
-    TaskQueue tasksQueue;
+    // Constants
+    static constexpr int NO_LEADER = -1;
+    static constexpr int CONVERSATION = 0;
+    static constexpr int TASKS = 1;
+
+    // Thread managment
     std::vector<std::thread> threadsPool;
     std::mutex mtx;
     std::condition_variable cv;
     std::atomic<int> leaderIndex;
     std::atomic<bool> stop{false};
+    std::atomic<bool> toCloseClient{false};
+
+    // Task managment
+    TaskQueue tasksQueue;
     int client_fd;
 
-    // Inhertied function to be implemented by derived classes to handle requests
-
+    // Private methods
+    void tasksEnqueing();
+    void tasksExecution();
+    bool enqueingChoices(int choice);
+    void promoteFollower(int follower);  // Promotes a follower to leader
+    // void handleError(const std::string& error_msg);
+    // void cleanupResources();
+    
 public:
     LeaderFollowerDP();
     ~LeaderFollowerDP();
     void handleRequest(int& client_FD) override;
-    void promoteFollower(int follower);  // Promotes a follower to leader
-    void tasksEnqueing();
-    void tasksExecution();
-    bool enqueingChoices(int choice);
+
 };
 
 #endif 
