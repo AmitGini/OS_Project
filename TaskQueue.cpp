@@ -1,7 +1,12 @@
 #include "TaskQueue.hpp"
 #include <iostream>
 
-void TaskQueue::enqueue(TaskType func, int& arg1, int arg2){
+TaskQueue::~TaskQueue(){
+    clear();
+}
+
+void TaskQueue::enqueue(TaskType func, int &arg1, int arg2)
+{
     TaskData data{
         std::move(func),
         arg1,
