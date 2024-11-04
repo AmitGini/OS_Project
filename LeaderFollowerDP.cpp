@@ -11,8 +11,11 @@ If the leader is done execute all the tasks and queue is empty or cant preform t
 
 LeaderFollowerDP::LeaderFollowerDP() : leaderIndex(NO_LEADER), stop(false), client_fd(-1) {
     try{
-        this->threadsPool.push_back(std::thread(&LeaderFollowerDP::tasksEnqueing, this));
-        this->threadsPool.push_back(std::thread(&LeaderFollowerDP::tasksExecution, this));
+        this->tasksQueue = std::make_unique<TaskQueue>();
+        this->threadsPool.push_back(std::make_unique<std::thread>(&LeaderFollowerDP::tasksEnqueing, this));
+        this->threadsPool.back()->detach();
+        this->threadsPool.push_back(std::make_unique<std::thread>(&LeaderFollowerDP::tasksExecution, this));
+        this->threadsPool.back()->detach();
         std::cout<<"Created Threades"<<std::endl;
     }catch(const std::exception& e){
         std::cerr << "Error: " << e.what() << std::endl;
@@ -20,23 +23,37 @@ LeaderFollowerDP::LeaderFollowerDP() : leaderIndex(NO_LEADER), stop(false), clie
 }
 
 LeaderFollowerDP::~LeaderFollowerDP() {
-    std::cout<<"**** Closing Pattern Type ****"<<std::endl;
-    std::cout<<"Deleting Leader-Follower"<<std::endl;
+    std::cout<<"**** Closing Leader-Follower ****"<<std::endl;
     {
-        std::lock_guard<std::mutex> lock(mtx);
-        this->stop = true;
-        this->toCloseClient = true;
+        std::lock_guard<std::mutex> lock(this->mtx);
+        this->stop = true;  // Stop the threads - Flag
+        this->toCloseClient = true;  // Close the client socket - Flag
+        promoteFollower(NO_LEADER);
     }
-    
     cv.notify_all();
-    
-    for (auto& thread : threadsPool) {
-        if (thread.joinable()) {
-            thread.join();
+
+    std::cout<<"Leader-Follower: Closing Threads..."<<std::endl;
+    for (auto& thread : this->threadsPool) {  // Join the threads
+        if (thread->joinable()) {
+            thread->join();
         }
+        if(thread) thread.reset();  // Reset the shared pointer
     }
-    tasksQueue.clear();
-    std::cout<<"Leader Follower Threads has Closed!"<<std::endl;
+    threadsPool.clear();  // Clear the vector of threads
+    
+    if(graph){
+        std::cout<<"Leader-Follower: Closing Graph..."<<std::endl;
+        this->graph->clearGraph();  // Clear the graph
+        this->graph.reset();  // Reset the shared pointer of the graph
+    }
+
+    if(tasksQueue){
+        std::cout<<"Leader-Follower: Closing Task Queue..."<<std::endl;
+        this->tasksQueue->clearQueue();  // Clear the queue of tasks client might entered
+        this->tasksQueue.reset();  // Reset the shared pointer of the queue
+    }
+
+    std::cout<<"**** Leader Follower: Done ****"<<std::endl;
 }
 
 void LeaderFollowerDP::handleRequest(int& client_FD) {
@@ -58,7 +75,7 @@ void LeaderFollowerDP::tasksEnqueing(){
             this->cv.wait(lock, [this] { return (this->leaderIndex == CONVERSATION || this->stop); });
         }
 
-        if (stop) break;
+        if (stop) return;
 
         if(this->client_fd < 0){
             std::cout<<"\n** Client has Left **\n"<<std::endl;
@@ -94,7 +111,7 @@ void LeaderFollowerDP::tasksExecution(){
             this->cv.wait(lock, [this] { return this->leaderIndex == TASKS || this->stop; });
         }
 
-        if (stop) break;
+        if (stop) return;
 
         if(this->client_fd < 0){
             std::cout<<"\n** Client has Left **\n"<<std::endl;
@@ -107,11 +124,11 @@ void LeaderFollowerDP::tasksExecution(){
             if(this->toCloseClient){
                 promoteFollower(NO_LEADER);
             }
-            else if(this->tasksQueue.isEmpty()){
+            else if(this->tasksQueue->isEmpty()){
                 std::cout<<"Tasks Queue is Empty"<<std::endl;
                 promoteFollower(CONVERSATION);
             }else{
-                bool success = this->tasksQueue.executeTask();
+                bool success = this->tasksQueue->executeTask();
                 if(!success){
                     sendMessage(this->client_fd, "Task execution failed. Try to use Healthy Logic. (Recommended)\n");
                     std::cout<<"*** Task Execution Failed - Dequeue and Keep Working ***"<<std::endl;
@@ -160,8 +177,8 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
                 this->toCloseClient = true;
                 return this->stopClient(client_fd);};
             
-            this->tasksQueue.clear();  // Clear the queue of tasks client might entered
-            this->tasksQueue.enqueue(func , this->client_fd, choice);
+            this->tasksQueue->clearQueue();  // Clear the queue of tasks client might entered
+            this->tasksQueue->enqueue(func , this->client_fd, choice);
             return false;  // return value false execute the tasks
             
         case 0: // Start Executing the tasks 
@@ -170,7 +187,7 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
             return true;
     }
 
-    this->tasksQueue.enqueue(func , this->client_fd, choice);
+    this->tasksQueue->enqueue(func , this->client_fd, choice);
     std::cout<<"Task Added"<<std::endl;
     return true;
 }

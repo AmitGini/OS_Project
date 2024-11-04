@@ -1,5 +1,14 @@
 #include "RequestService.hpp"
 
+RequestService::~RequestService(){
+    std::cout<<"***** Deleting Request Service *****"<<std::endl;
+    if(graph){
+        std::cout<<"Request Service: Deleting Graph "<<std::endl;
+        this->graph->clearGraph();  // Clear the graph
+        this->graph.reset();  // Reset the shared pointer of the graph
+    }
+    std::cout<<"***** Request Service: Done *****"<<std::endl;
+}
 
 // Send a message to the client
 void RequestService::sendMessage(int &client_FD, const std::string& message) {
@@ -70,6 +79,7 @@ bool RequestService::createGraph(int &client_FD){
             throw std::invalid_argument("Invalid number of vertices");
         }
 
+        if(graph) graph.reset();  // Reset the graph
         graph = std::make_unique<Graph>(numVertices);  // Create a new graph
         
         // Send acknowledgment to client
@@ -186,6 +196,7 @@ bool RequestService::calculateMST(int &client_FD) {
             graph->setMST(std::move(mst));
             message = "MST computed using " + std::string(choice == 1 ? "Prim's" : "Kruskal's") + " Algorithm.\n";
             sendMessage(client_FD, message);
+            if(mst) mst.reset();
         } else {
             return false;
         }

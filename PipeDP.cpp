@@ -12,33 +12,63 @@ PipeDP::PipeDP() : isStageActive(false) {
 }
 
 PipeDP::~PipeDP() {
-    std::cout<<"**** Closing Pattern Type ****"<<std::endl;
-    std::cout<<"Deleting PipeDP"<<std::endl;
-    this->isStageActive = false;
-    stages.clear();
-    std::cout<<"Pipe And Active Objects has Closed"<<std::endl;
+    std::cout<<"**** Deleting Pipe ****"<<std::endl;
+    {
+        std::lock_guard<std::mutex> lock(this->pipeMtx);
+        this->isStageActive = false;
+        std::cout<<"Pipe: Make Sure All Stages Done Working"<<std::endl;
+        for(auto& stage : stages) {
+            if(stage->isActive()) {
+                stage->makePipeWait(this->pipeMtx, this);
+                sleep(0.5);  // Sleep for 1 second in case next stages are still active, to avoid conition race
+            }
+            stage->clearActiveObject();  // Clear queue and reset the shared pointer of the queue and next stage
+        }
+    }
+    if(!isStageActive){
+        std::cout<<"Pipe: All Stages Done Working"<<std::endl;
+        for(auto stage : stages) {
+            if(stage){
+                stage.reset();  // Reset the shared pointer
+            }
+        }
+        std::cout<<"Pipe: Clear Stages"<<std::endl;
+        stages.clear();  // Clear the vector of stages
+    } else {
+        std::cout<<"********* Failed to Close PipeDP *********"<<std::endl;
+    }
+    
+    if(graph){
+        std::cout<<"Pipe: Close Graph"<<std::endl;
+        this->graph->clearGraph();  // Clear the graph
+        this->graph.reset();  // Reset the shared pointer of the graph
+    }
+    std::cout<<"********* Pipe: Done *********"<<std::endl;
 }
 
 void PipeDP::setupPipe() {
     try {
-        // Pre-allocate vector capacity
+
         stages.reserve(STAGE_CLIENT_EXIT + 1);
         
-        // Create stages with error checking
-        for(int i = STAGE_CREATE_GRAPH; i < STAGE_CLIENT_EXIT+ 1; ++i) {
+        for(int i = STAGE_CREATE_GRAPH; i <= STAGE_CLIENT_EXIT; ++i) {
             std::cout <<"***** "<< "Creating stage " << i <<" *****"<<std::endl;
-            stages.push_back(std::make_shared<ActiveObjectDP>());
+            auto stage = std::make_shared<ActiveObjectDP>();
+            if (!stage) {
+                throw std::runtime_error("Failed to create stage");
+            }
+            stages.push_back(std::move(stage));  // Use move semantics
             std::cout << "Stage " << i << " created successfully" << std::endl;
         }
         
-        std::cout<<"*******Here*******"<<std::endl;
-
         // Set up the pipeline connections
         stages[STAGE_CREATE_GRAPH]->setNextStage(stages[STAGE_MODIFY_GRAPH]);
         stages[STAGE_MODIFY_GRAPH]->setNextStage(stages[STAGE_CALCULATE_MST]);
         stages[STAGE_CALCULATE_MST]->setNextStage(stages[STAGE_MST_OPERATIONS]);
         stages[STAGE_MST_OPERATIONS]->setNextStage(stages[STAGE_CLIENT_EXIT]);
         stages[STAGE_CLIENT_EXIT]->setNextStage(stages[STAGE_CLIENT_EXIT]);
+
+        std::cout<<"Finish Set Next Stages"<<std::endl;
 
         stages[STAGE_CREATE_GRAPH]->setPrevStageStatus(true);
 
@@ -72,6 +102,9 @@ void PipeDP::setupPipe() {
         
     } catch (const std::exception& e) {
         std::cerr << "Stage creation failed: " << e.what() << std::endl;
+        for(auto& stage : stages) {
+            stage.reset();
+        }
         stages.clear();
         throw;
     }
@@ -120,7 +153,7 @@ void PipeDP::handleRequest(int& client_FD) {
         for(auto& stage : stages) {
             if(stage->isActive()) {
                 stage->makePipeWait(this->pipeMtx, this);
-                sleep(1);  // Sleep for 1 second in case next stages are still active, to avoid conition race
+                sleep(0.5);  // Sleep for 1 second in case next stages are still active, to avoid conition race
             }
         }
         

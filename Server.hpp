@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <vector>
 #include <thread>
+#include <memory>
 #include "RequestService.hpp"
 #include "PipeDP.hpp"
 #include "LeaderFollowerDP.hpp"
@@ -22,8 +23,9 @@
 
 class Server {
 private:
-    std::vector<std::pair<int, std::shared_ptr<std::thread>>> clients_dataset;  // Vector to store client data: socket and thread
+    std::vector<std::pair<int, std::unique_ptr<std::thread>>> clients_dataset;  // Vector to store client data: socket and thread
     std::unique_ptr<RequestService> patternType;  // Pointer to the thread design pattern 
+    std::unique_ptr<std::thread> stop_thread;  // Pointer to the stop thread
     std::mutex clients_mutex;
     std::atomic<bool> stopServer{false};  // Flag to stop the server
     struct sockaddr_in address{};  // Address structure

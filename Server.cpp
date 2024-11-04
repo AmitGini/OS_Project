@@ -14,34 +14,42 @@ Server::Server(bool isPipe) {
     }
 
      // Start the stop thread - to listen for stop command input from keyboard
-    auto stop_thread = std::make_shared<std::thread>(&Server::stop, this);  
-    stop_thread->detach();  // Detach the thread
+    this->stop_thread = std::make_unique<std::thread>(&Server::stop, this);  
+    this->stop_thread->detach();
 
     start();  // Start the server
 }
 
 // Destructor
 Server::~Server(){    
-    std::cout << "\n********* Stopping Server *********" << std::endl;
-    std::cout<<"Closing Client Sockets && Join Threads..."<<std::endl;
-    for(auto& client_data : clients_dataset){
-        if (client_data.first > 0) {
-            close(client_data.first);
-        }
-        
+    std::cout << "\n********* Deleting Server *********" << std::endl;
+
+    if(patternType) {  // Reset the pattern type
+        std::cout<<"Server: Closing Pattern Type..."<<std::endl;
+        patternType.reset(); 
+    }
+
+    std::cout<<"Server: Closing Client Sockets && Join Threads..."<<std::endl;
+    for(auto& client_data : this->clients_dataset){
         if(client_data.second && client_data.second->joinable()){
             client_data.second->join();
         }
+        if(client_data.first >= 0){
+            close(client_data.first);
+        }
     }
+    this->clients_dataset.clear();
+    
+    std::cout<<"Server: Closing Stop Thread..."<<std::endl;
+    if(stop_thread) stop_thread.reset();
 
-    clients_dataset.clear();
 
-    std::cout<<"Closing Server File Descriptor..."<<std::endl;
+    std::cout<<"Server: Closing Server File Descriptor..."<<std::endl;
     if (server_fd >= 0) {
         close(server_fd);
+        server_fd = -1;
     }
-
-    std::cout<<"********* Server has Closed! *********"<<std::endl;
+    std::cout<<"********* Server: Done *********"<<std::endl;
 }
 
 // Start the server
@@ -124,8 +132,9 @@ void Server::handleConnections(){
         if(new_socket >= 0) {
             std::lock_guard<std::mutex> lock(clients_mutex);
             std::cout << "New client connected!" << std::endl;
-            auto client_thread = std::make_shared<std::thread>(
+            auto client_thread = std::make_unique<std::thread>(
                                     &Server::acceptClientAccess, this, new_socket);
+            client_thread->detach();
             clients_dataset.emplace_back(new_socket, std::move(client_thread));
             std::cout << "Client has Added to the Clients list!" << std::endl;
         }
@@ -139,22 +148,4 @@ void Server::acceptClientAccess(int client_socket){
     } catch (const std::exception& e) {
         std::cerr << "Error handling client: " << e.what() << std::endl;
     }
-
-    {
-        std::lock_guard<std::mutex> lock(clients_mutex);
-        auto it = std::find_if(clients_dataset.begin(), clients_dataset.end(),
-            [client_socket](const auto& pair) { return pair.first == client_socket; });
-            
-        if (it != clients_dataset.end()) {
-            if(it->second && it->second->joinable()) {
-                it->second->detach();
-            }
-            // Close socket before removing from vector
-            if (close(client_socket) < 0) {
-                std::cerr << "Error closing socket: " << strerror(errno) << std::endl;
-            }
-            clients_dataset.erase(it);
-        }
-    }
-
 }

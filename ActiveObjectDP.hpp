@@ -34,6 +34,7 @@ public:
     void updateNextStage(bool status);
     void notify();
     void makePipeWait(std::mutex &pipeMtx, PipeDP *pipe);
+    void clearActiveObject();
     bool isActive();
 };
 #endif

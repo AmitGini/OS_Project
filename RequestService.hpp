@@ -24,6 +24,7 @@ protected:
     char buffer[1024];  // Buffer for reading and writing data
 
 public:
+    ~RequestService();  // Destructor
     virtual void handleRequest(int& client_FD) = 0;  // Pure virtual function to be implemented by derived classes to handle requests
     void sendMessage(int &client_FD, const std::string& message);  // Sends a message to a client
     int startConversation(int &client_FD);  // Initiates conversation with a client, presenting a menu and handling input

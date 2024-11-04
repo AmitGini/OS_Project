@@ -9,6 +9,8 @@
 #include <condition_variable>
 #include <optional>
 #include <atomic>
+#include <vector>
+#include <memory>
 #include "TaskQueue.hpp"
 #include "RequestService.hpp"
 
@@ -21,7 +23,7 @@ private:
     static constexpr int TASKS = 1;
 
     // Thread managment
-    std::vector<std::thread> threadsPool;
+    std::vector<std::unique_ptr<std::thread>> threadsPool;
     std::mutex mtx;
     std::condition_variable cv;
     std::atomic<int> leaderIndex;
@@ -29,7 +31,7 @@ private:
     std::atomic<bool> toCloseClient{false};
 
     // Task managment
-    TaskQueue tasksQueue;
+    std::unique_ptr<TaskQueue> tasksQueue;
     int client_fd;
 
     // Private methods

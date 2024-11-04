@@ -18,6 +18,7 @@ private:
 
     // Private methods
     void setupPipe();  // Setup the pipe with active objects
+    
 public:
     PipeDP();
     ~PipeDP();

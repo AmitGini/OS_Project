@@ -1,0 +1,331 @@
+==4016== Memcheck, a memory error detector
+==4016== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==4016== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+==4016== Command: ./graph -l
+==4016== 
+Start Building the Server...
+Starting Leader Follower Design Pattern
+Created Threades
+Server started listening on port 4040
+** Task Follower ** - Waiting For Promotion
+** Conversation Follower ** - Waiting For Promotion
+New client connected!
+
+*** Leader-Follower - New Connection ***
+
+****** Promotion: Leader-Conversation ******
+Client has Added to the Clients list!
+Starting Conversation with Client: 4
+Task enqueued, task number: 1
+Task Added
+Starting Conversation with Client: 4
+Task enqueued, task number: 5
+Task Added
+Starting Conversation with Client: 4
+
+Promoting Follower to Execute Tasks
+
+
+****** Promotion: Leader-Tasks ******
+** Conversation Follower ** - Waiting For Promotion
+Starting Task Execution
+Starting Task Execution
+*** Task Execution Failed - Dequeue and Keep Working ***
+Tasks Queue is Empty
+
+****** Promotion: Leader-Conversation ******
+** Task Follower ** - Waiting For Promotion
+Starting Conversation with Client: 4
+Queue cleared!
+Task enqueued, task number: 10
+
+Promoting Follower to Execute Tasks
+
+
+****** Promotion: Leader-Tasks ******
+** Conversation Follower ** - Waiting For Promotion
+Starting Task Execution
+Client Connection Closed
+
+****** No-Leader ******
+** Task Follower ** - Waiting For Promotion
+
+********* Deleting Server *********
+Server: Closing Pattern Type...
+***** Deleting Request Service *****
+Request Service: Deleting Graph 
+***** Request Service: Done *****
+Server: Closing Client Sockets && Join Threads...
+Server: Closing Stop Thread...
+Server: Closing Server File Descriptor...
+********* Server: Done *********
+==4016== 
+==4016== HEAP SUMMARY:
+==4016==     in use at exit: 1,328 bytes in 10 blocks
+==4016==   total heap usage: 48 allocs, 38 frees, 83,031 bytes allocated
+==4016== 
+==4016== 8 bytes in 1 blocks are indirectly lost in loss record 1 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x12A498: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x127645: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:15)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:_Znwm
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 8 bytes in 1 blocks are indirectly lost in loss record 2 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x12A498: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x1276BF: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:17)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:_Znwm
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 32 bytes in 1 blocks are still reachable in loss record 3 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x12A8AF: std::thread::thread<void (LeaderFollowerDP::*)(), LeaderFollowerDP*, void>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (std_thread.h:143)
+==4016==    by 0x12A4AA: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x127645: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:15)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZNSt6threadC1IM16LeaderFollowerDPFvvEJPS1_EvEEOT_DpOT0_
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 32 bytes in 1 blocks are still reachable in loss record 4 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x12A8AF: std::thread::thread<void (LeaderFollowerDP::*)(), LeaderFollowerDP*, void>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (std_thread.h:143)
+==4016==    by 0x12A4AA: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x1276BF: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:17)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   fun:_ZNSt6threadC1IM16LeaderFollowerDPFvvEJPS1_EvEEOT_DpOT0_
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 32 (16 direct, 16 indirect) bytes in 1 blocks are definitely lost in loss record 5 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x12B371: __gnu_cxx::new_allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==4016==    by 0x12B1C4: std::allocator_traits<std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > >::allocate(std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > >&, unsigned long) (alloc_traits.h:464)
+==4016==    by 0x12B05F: std::_Vector_base<std::unique_ptr<std::thread, std::default_delete<std::thread> >, std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > >::_M_allocate(unsigned long) (stl_vector.h:346)
+==4016==    by 0x12ACCA: void std::vector<std::unique_ptr<std::thread, std::default_delete<std::thread> >, std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > >::_M_realloc_insert<std::unique_ptr<std::thread, std::default_delete<std::thread> > >(__gnu_cxx::__normal_iterator<std::unique_ptr<std::thread, std::default_delete<std::thread> >*, std::vector<std::unique_ptr<std::thread, std::default_delete<std::thread> >, std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > > >, std::unique_ptr<std::thread, std::default_delete<std::thread> >&&) (vector.tcc:440)
+==4016==    by 0x12A9E9: std::unique_ptr<std::thread, std::default_delete<std::thread> >& std::vector<std::unique_ptr<std::thread, std::default_delete<std::thread> >, std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > >::emplace_back<std::unique_ptr<std::thread, std::default_delete<std::thread> > >(std::unique_ptr<std::thread, std::default_delete<std::thread> >&&) (vector.tcc:121)
+==4016==    by 0x12A51B: std::vector<std::unique_ptr<std::thread, std::default_delete<std::thread> >, std::allocator<std::unique_ptr<std::thread, std::default_delete<std::thread> > > >::push_back(std::unique_ptr<std::thread, std::default_delete<std::thread> >&&) (stl_vector.h:1204)
+==4016==    by 0x1276CE: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:17)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   fun:_ZN9__gnu_cxx13new_allocatorISt10unique_ptrISt6threadSt14default_deleteIS2_EEE8allocateEmPKv
+   fun:_ZNSt16allocator_traitsISaISt10unique_ptrISt6threadSt14default_deleteIS1_EEEE8allocateERS5_m
+   fun:_ZNSt12_Vector_baseISt10unique_ptrISt6threadSt14default_deleteIS1_EESaIS4_EE11_M_allocateEm
+   fun:_ZNSt6vectorISt10unique_ptrISt6threadSt14default_deleteIS1_EESaIS4_EE17_M_realloc_insertIJS4_EEEvN9__gnu_cxx17__normal_iteratorIPS4_S6_EEDpOT_
+   fun:_ZNSt6vectorISt10unique_ptrISt6threadSt14default_deleteIS1_EESaIS4_EE12emplace_backIJS4_EEERS4_DpOT_
+   fun:_ZNSt6vectorISt10unique_ptrISt6threadSt14default_deleteIS1_EESaIS4_EE9push_backEOS4_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 64 bytes in 1 blocks are indirectly lost in loss record 6 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x1270B1: __gnu_cxx::new_allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >*>::allocate(unsigned long, void const*) (new_allocator.h:127)
+==4016==    by 0x126EBB: std::allocator_traits<std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >*> >::allocate(std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >*>&, unsigned long) (alloc_traits.h:464)
+==4016==    by 0x126BB1: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_M_allocate_map(unsigned long) (stl_deque.h:576)
+==4016==    by 0x126837: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_M_initialize_map(unsigned long) (stl_deque.h:625)
+==4016==    by 0x126445: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_Deque_base() (stl_deque.h:439)
+==4016==    by 0x125F9D: std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::deque() (stl_deque.h:834)
+==4016==    by 0x126010: std::queue<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > > >::queue<std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >, void>() (stl_queue.h:167)
+==4016==    by 0x125A7F: TaskQueue::TaskQueue() (TaskQueue.hpp:9)
+==4016==    by 0x125AFB: std::_MakeUniq<TaskQueue>::__single_object std::make_unique<TaskQueue>() (unique_ptr.h:962)
+==4016==    by 0x1275E2: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:14)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:_Znwm
+   fun:_ZN9__gnu_cxx13new_allocatorIPSt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS3_EEE8allocateEmPKv
+   fun:_ZNSt16allocator_traitsISaIPSt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EEEE8allocateERS7_m
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EE15_M_allocate_mapEm
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EE17_M_initialize_mapEm
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EEC1Ev
+   fun:_ZNSt5dequeISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EEC1Ev
+   fun:_ZNSt5queueISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESt5dequeIS5_SaIS5_EEEC1IS8_vEEv
+   fun:_ZN9TaskQueueC1Ev
+   fun:_ZSt11make_uniqueI9TaskQueueJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+}
+==4016== 288 bytes in 1 blocks are possibly lost in loss record 7 of 10
+==4016==    at 0x484DA83: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x40147D9: calloc (rtld-malloc.h:44)
+==4016==    by 0x40147D9: allocate_dtv (dl-tls.c:375)
+==4016==    by 0x40147D9: _dl_allocate_tls (dl-tls.c:634)
+==4016==    by 0x4B517B4: allocate_stack (allocatestack.c:430)
+==4016==    by 0x4B517B4: pthread_create@@GLIBC_2.34 (pthread_create.c:647)
+==4016==    by 0x494C328: std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==4016==    by 0x12A8E9: std::thread::thread<void (LeaderFollowerDP::*)(), LeaderFollowerDP*, void>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (std_thread.h:143)
+==4016==    by 0x12A4AA: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x127645: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:15)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.34
+   fun:_ZNSt6thread15_M_start_threadESt10unique_ptrINS_6_StateESt14default_deleteIS1_EEPFvvE
+   fun:_ZNSt6threadC1IM16LeaderFollowerDPFvvEJPS1_EvEEOT_DpOT0_
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 288 bytes in 1 blocks are possibly lost in loss record 8 of 10
+==4016==    at 0x484DA83: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x40147D9: calloc (rtld-malloc.h:44)
+==4016==    by 0x40147D9: allocate_dtv (dl-tls.c:375)
+==4016==    by 0x40147D9: _dl_allocate_tls (dl-tls.c:634)
+==4016==    by 0x4B517B4: allocate_stack (allocatestack.c:430)
+==4016==    by 0x4B517B4: pthread_create@@GLIBC_2.34 (pthread_create.c:647)
+==4016==    by 0x494C328: std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+==4016==    by 0x12A8E9: std::thread::thread<void (LeaderFollowerDP::*)(), LeaderFollowerDP*, void>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (std_thread.h:143)
+==4016==    by 0x12A4AA: std::_MakeUniq<std::thread>::__single_object std::make_unique<std::thread, void (LeaderFollowerDP::*)(), LeaderFollowerDP*>(void (LeaderFollowerDP::*&&)(), LeaderFollowerDP*&&) (unique_ptr.h:962)
+==4016==    by 0x1276BF: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:17)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.34
+   fun:_ZNSt6thread15_M_start_threadESt10unique_ptrINS_6_StateESt14default_deleteIS1_EEPFvvE
+   fun:_ZNSt6threadC1IM16LeaderFollowerDPFvvEJPS1_EvEEOT_DpOT0_
+   fun:_ZSt11make_uniqueISt6threadJM16LeaderFollowerDPFvvEPS1_EENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== 512 bytes in 1 blocks are indirectly lost in loss record 9 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x127223: __gnu_cxx::new_allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > >::allocate(unsigned long, void const*) (new_allocator.h:127)
+==4016==    by 0x1270E0: std::allocator_traits<std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::allocate(std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > >&, unsigned long) (alloc_traits.h:464)
+==4016==    by 0x126EE9: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_M_allocate_node() (stl_deque.h:562)
+==4016==    by 0x126C2E: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_M_create_nodes(std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >**, std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >**) (stl_deque.h:663)
+==4016==    by 0x12688D: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_M_initialize_map(unsigned long) (stl_deque.h:637)
+==4016==    by 0x126445: std::_Deque_base<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::_Deque_base() (stl_deque.h:439)
+==4016==    by 0x125F9D: std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >::deque() (stl_deque.h:834)
+==4016==    by 0x126010: std::queue<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > > >::queue<std::deque<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> >, std::allocator<std::unique_ptr<TaskQueue::TaskData, std::default_delete<TaskQueue::TaskData> > > >, void>() (stl_queue.h:167)
+==4016==    by 0x125A7F: TaskQueue::TaskQueue() (TaskQueue.hpp:9)
+==4016==    by 0x125AFB: std::_MakeUniq<TaskQueue>::__single_object std::make_unique<TaskQueue>() (unique_ptr.h:962)
+==4016==    by 0x1275E2: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:14)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:_Znwm
+   fun:_ZN9__gnu_cxx13new_allocatorISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS3_EEE8allocateEmPKv
+   fun:_ZNSt16allocator_traitsISaISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EEEE8allocateERS6_m
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EE16_M_allocate_nodeEv
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EE15_M_create_nodesEPPS5_S9_
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EE17_M_initialize_mapEm
+   fun:_ZNSt11_Deque_baseISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EEC1Ev
+   fun:_ZNSt5dequeISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESaIS5_EEC1Ev
+   fun:_ZNSt5queueISt10unique_ptrIN9TaskQueue8TaskDataESt14default_deleteIS2_EESt5dequeIS5_SaIS5_EEEC1IS8_vEEv
+   fun:_ZN9TaskQueueC1Ev
+   fun:_ZSt11make_uniqueI9TaskQueueJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+}
+==4016== 656 (80 direct, 576 indirect) bytes in 1 blocks are definitely lost in loss record 10 of 10
+==4016==    at 0x4849013: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==4016==    by 0x125A9D: std::_MakeUniq<TaskQueue>::__single_object std::make_unique<TaskQueue>() (unique_ptr.h:962)
+==4016==    by 0x1275E2: LeaderFollowerDP::LeaderFollowerDP() (LeaderFollowerDP.cpp:14)
+==4016==    by 0x117CEC: std::_MakeUniq<LeaderFollowerDP>::__single_object std::make_unique<LeaderFollowerDP>() (unique_ptr.h:962)
+==4016==    by 0x116A0C: Server::Server(bool) (Server.cpp:13)
+==4016==    by 0x10CF0E: main (main.cpp:36)
+==4016== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   fun:_ZSt11make_uniqueI9TaskQueueJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN16LeaderFollowerDPC1Ev
+   fun:_ZSt11make_uniqueI16LeaderFollowerDPJEENSt9_MakeUniqIT_E15__single_objectEDpOT0_
+   fun:_ZN6ServerC1Eb
+   fun:main
+}
+==4016== LEAK SUMMARY:
+==4016==    definitely lost: 96 bytes in 2 blocks
+==4016==    indirectly lost: 592 bytes in 4 blocks
+==4016==      possibly lost: 576 bytes in 2 blocks
+==4016==    still reachable: 64 bytes in 2 blocks
+==4016==         suppressed: 0 bytes in 0 blocks
+==4016== 
+==4016== For lists of detected and suppressed errors, rerun with: -s
+==4016== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)
