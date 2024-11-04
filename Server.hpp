@@ -21,25 +21,24 @@
 #define PORT 4040
 
 class Server {
+private:
+    std::vector<std::pair<int, std::shared_ptr<std::thread>>> clients_dataset;  // Vector to store client data: socket and thread
+    std::unique_ptr<RequestService> patternType;  // Pointer to the thread design pattern 
+    std::mutex clients_mutex;
+    std::atomic<bool> stopServer{false};  // Flag to stop the server
+    struct sockaddr_in address{};  // Address structure
+    int server_fd{-1};  // File descriptor for the server
+
+    void start();  // Start the server
+    void handleConnections();  // Handle client connections
+    void acceptClientAccess(int client_socket);  // Initialize the client 
 public:
     Server(bool isPipe);  // Constructor
     ~Server();  // Destructor
     
     void stop();  // Stop the server    
 
-private:
-    std::vector<std::pair<int,std::thread>> clients_dataset;  // Vector to store client data: socket and thread
-    RequestService* patternType;  // Pointer to the thread design pattern 
 
-    struct sockaddr_in address;  // Address structure
-    int server_fd;  // File descriptor for the server
-    
-    bool stopServer;  // Flag to stop the server
-    std::mutex clients_mutex;
-
-    void start();  // Start the server
-    void handleConnections();  // Handle client connections
-    void acceptClientAccess(int client_socket);  // Initialize the client 
 };
 
 

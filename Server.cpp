@@ -1,38 +1,36 @@
 #include "Server.hpp"
 
 // Constructor 
-Server::Server(bool isPipe): patternType(nullptr) , server_fd(-1), stopServer(false){
+Server::Server(bool isPipe) {
     std::cout<<"Start Building the Server..."<<std::endl;
 
     // Choose the Design pattern
     if(isPipe){
         std::cout<<"Starting Pipeline Design Pattern"<<std::endl;
-        this->patternType = new PipeDP();
+        this->patternType = std::make_unique<PipeDP>();
     }else{
         std::cout<<"Starting Leader Follower Design Pattern"<<std::endl;
-        this->patternType = new LeaderFollowerDP();
+        this->patternType = std::make_unique<LeaderFollowerDP>();
     }
 
-    std::thread(&Server::stop, this).detach(); // Start the stop thread - to listen for stop command input from keyboard
+     // Start the stop thread - to listen for stop command input from keyboard
+    auto stop_thread = std::make_shared<std::thread>(&Server::stop, this);  
+    stop_thread->detach();  // Detach the thread
+
     start();  // Start the server
 }
 
 // Destructor
 Server::~Server(){    
-    std::cout<<"\n*********Destructor Init*********"<<std::endl;
-    std::cout<<"Closing Pattern Type..."<<std::endl;
-    delete patternType;
-
-    std::cout<<"Closing Server..."<<std::endl;
-
+    std::cout << "\n********* Stopping Server *********" << std::endl;
     std::cout<<"Closing Client Sockets && Join Threads..."<<std::endl;
-    for(std::pair<int,std::thread>& client_data : clients_dataset){
-        if (client_data.first >= 0) {
+    for(auto& client_data : clients_dataset){
+        if (client_data.first > 0) {
             close(client_data.first);
         }
         
-        if(client_data.second.joinable()){
-            client_data.second.join();
+        if(client_data.second && client_data.second->joinable()){
+            client_data.second->join();
         }
     }
 
@@ -43,13 +41,13 @@ Server::~Server(){
         close(server_fd);
     }
 
-    std::cout<<"Server has Closed!"<<std::endl;
+    std::cout<<"********* Server has Closed! *********"<<std::endl;
 }
 
 // Start the server
 void Server::start() {
     // Creating socket FD
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
@@ -86,13 +84,6 @@ void Server::stop(){
             break;
         }
     }
-
-    std::cout << "\n*********Stopping Server*********" << std::endl;
-    // Close the server socket to unblock accept
-    if (server_fd != -1) {
-        close(server_fd);
-        server_fd = -1; // Mark as closed
-    }
 }
 
 void Server::handleConnections(){
@@ -100,7 +91,7 @@ void Server::handleConnections(){
     fd_set readfds;
     struct timeval timeout;
     
-    while(true) {
+    while(!stopServer) {
         int new_socket = -1;
         FD_ZERO(&readfds);
         FD_SET(server_fd, &readfds);
@@ -129,23 +120,20 @@ void Server::handleConnections(){
                 continue;
             }
         }
+
         if(new_socket >= 0) {
             std::lock_guard<std::mutex> lock(clients_mutex);
             std::cout << "New client connected!" << std::endl;
-            std::thread client_thread(&Server::acceptClientAccess, this, new_socket);
+            auto client_thread = std::make_shared<std::thread>(
+                                    &Server::acceptClientAccess, this, new_socket);
             clients_dataset.emplace_back(new_socket, std::move(client_thread));
             std::cout << "Client has Added to the Clients list!" << std::endl;
         }
-
-        if(stopServer) break;
     }
 }
 
 void Server::acceptClientAccess(int client_socket){
-    if(client_socket < 0){
-        return;
-    }
-    
+    if(client_socket < 0) return;
     try {
         this->patternType->handleRequest(client_socket);
     } catch (const std::exception& e) {
@@ -158,22 +146,15 @@ void Server::acceptClientAccess(int client_socket){
             [client_socket](const auto& pair) { return pair.first == client_socket; });
             
         if (it != clients_dataset.end()) {
-            close(client_socket);
-            it->first = -1;
-        }
-
-        // Store thread ID to remove later
-        std::thread::id this_id = std::this_thread::get_id();
-        
-        // Find and remove completed thread
-        auto thread_it = std::find_if(clients_dataset.begin(), clients_dataset.end(),
-            [this_id](const auto& pair) { 
-                return pair.second.get_id() == this_id; 
-            });
-            
-        if(thread_it != clients_dataset.end()) {
-            thread_it->second.detach(); // Thread detaches itself
-            clients_dataset.erase(thread_it); // Remove from vector
+            if(it->second && it->second->joinable()) {
+                it->second->detach();
+            }
+            // Close socket before removing from vector
+            if (close(client_socket) < 0) {
+                std::cerr << "Error closing socket: " << strerror(errno) << std::endl;
+            }
+            clients_dataset.erase(it);
         }
     }
+
 }

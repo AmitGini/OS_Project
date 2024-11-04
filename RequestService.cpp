@@ -69,23 +69,20 @@ bool RequestService::createGraph(int &client_FD){
         if(numVertices <= 0){  
             throw std::invalid_argument("Invalid number of vertices");
         }
+
+        graph = std::make_unique<Graph>(numVertices);  // Create a new graph
+        
+        // Send acknowledgment to client
+        message = "Graph created with " + std::to_string(numVertices) + " vertices.\n";
+        sendMessage(client_FD, message);
+        return true;
+    
     }catch(std::invalid_argument& e){
         message = "Invalid number of vertices, Exiting Graph Creation.\n";
         sendMessage(client_FD, message);
         memset(buffer, 0, sizeof(buffer));
         return false;
     }
-
-    if (graph != nullptr) {
-        delete graph;
-        graph = nullptr;
-    }
-    graph = new Graph(numVertices);
-
-    // Send acknowledgment to client
-    message = "Graph created with " + std::to_string(numVertices) + " vertices.\n";
-    sendMessage(client_FD, message);
-    return true;
 }
 
 // Add edge to the graph conversation
@@ -176,7 +173,7 @@ bool RequestService::calculateMST(int &client_FD) {
         return false;
     }
     
-    MSTStrategy* strategy = nullptr;
+    std::unique_ptr<MSTStrategy> strategy = nullptr;
     if (choice == 1) {
         strategy = MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Prim);
     } else if (choice == 2) {
@@ -184,27 +181,14 @@ bool RequestService::calculateMST(int &client_FD) {
     }
     
     if (strategy) {
-        std::vector<std::vector<int>>* mst = strategy->computeMST(*graph);
-        
-        if (mst == nullptr) {
-            message = "Failed to compute MST. The result is null.\n";
+        std::unique_ptr<std::vector<std::vector<int>>> mst = strategy->computeMST(*graph);
+        if(mst){
+            graph->setMST(std::move(mst));
+            message = "MST computed using " + std::string(choice == 1 ? "Prim's" : "Kruskal's") + " Algorithm.\n";
             sendMessage(client_FD, message);
-            delete strategy;
+        } else {
             return false;
         }
-            // Debug: Print resulting MST matrix
-    std::cout << "Resulting MST Matrix:" << std::endl;
-        for (const auto& row : *mst) {
-            for (int weight : row) {
-                std::cout << weight << " ";
-            }
-            std::cout << std::endl;
-        }
-        
-        graph->setMST(mst);
-        message = "MST computed using " + std::string(choice == 1 ? "Prim's" : "Kruskal's") + " Algorithm.\n";
-        sendMessage(client_FD, message);
-        delete strategy;
     }
     return true;
 }
@@ -228,42 +212,36 @@ bool RequestService::getMSTData(int &client_FD, int choice) {
     }
 
     std::string message;
+    double data = -1;
+    std::string mst_data = "";
     switch (choice) {
-        case 5: {
-            // Get the weight of the longest path in MST
-            int longestPathWeight = graph->getMSTLongestDistance();
-            message = "Weight of the longest path in MST: " + std::to_string(longestPathWeight) + "\n";
+        case 5:   // Get the weight of the longest path in MST
+            data = static_cast<int>(graph->getMSTLongestDistance());
+            message = "Weight of the longest path in MST: " + std::to_string(data) + "\n";
             break;
-        }
-        case 6: {
-            // Get the weight of the shortest path in MST
-            int shortestPathWeight = graph->getMSTShortestDistance();
-            message = "Weight of the shortest path in MST: " + std::to_string(shortestPathWeight) + "\n";
+        
+        case 6:  // Get the weight of the shortest path in MST
+            data = static_cast<int>(graph->getMSTShortestDistance());
+            message = "Weight of the shortest path in MST: " + std::to_string(data) + "\n";
             break;
-        }
-        case 7: {
-            // Get the average weight of the edges in MST
-            double avgEdgeWeight = graph->getMSTAvgEdgeWeight();
-            message = "Average weight of the edges in MST: " + std::to_string(avgEdgeWeight) + "\n";
+        
+        case 7:  // Get the average weight of the edges in MST
+            data = graph->getMSTAvgEdgeWeight();
+            message = "Average weight of the edges in MST: " + std::to_string(data) + "\n";
             break;
-        }
-        case 8:{
-            // Total Weight of the MST
-            int totalWeight = graph->getMSTTotalWeight();
-            message = "Total weight of the MST: " + std::to_string(totalWeight) + "\n";
+        
+        case 8:  // Total Weight of the MST
+            data = static_cast<int>(graph->getMSTTotalWeight());
+            message = "Total weight of the MST: " + std::to_string(data) + "\n";
             break;
-        }
-        case 9: {
-            // Print MST
-            std::string mst = graph->printMST();
-            message = "MST:\n" + mst + "\n";
+        
+        case 9: // Print MST
+            mst_data = graph->printMST();
+            message = "MST:\n" + mst_data + "\n";
             break;
-        }
-        default: {
-            message = "Invalid choice for Data of the MST.\n";
-            sendMessage(client_FD, message);
+        
+        default: // Invalid choice
             return false;
-        }
     }
     sendMessage(client_FD, message);
     return true;
@@ -274,7 +252,6 @@ bool RequestService::stopClient(int &client_FD){
         std::perror("Error: Invalid client file descriptor.");
         return false;
     }
-    
     if(client_FD >= 0){
         std::string message = "\nIts not you its me, Bye Bye.";
         sendMessage(client_FD, message);

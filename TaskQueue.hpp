@@ -7,6 +7,7 @@
 #include <iostream>
 
 class TaskQueue {
+
 public:
     using TaskType = std::function<bool(int&, int)>;
     void enqueue(TaskType task, int& arg1, int arg2);  // Enqueue a function with its arguments into the queue
@@ -19,7 +20,7 @@ private:
     // Store both the function and its arguments
     struct TaskData {
         TaskType task;
-        int& arg1;
+        int arg1;
         int arg2;
     };
 

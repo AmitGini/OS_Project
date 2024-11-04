@@ -1,29 +1,19 @@
 #include "Graph.hpp"
 
+Graph::Graph(int vertices): numVertices(vertices), numEdges(0), hasUpdatedMST(false),
+        graphMatrix(vertices, std::vector<int>(vertices, 0)){}
 
-// Constructor
-Graph::Graph(int vertices) : numVertices(vertices), numEdges(0), hasUpdatedMST(false),
-adjMatrix(vertices, std::vector<int>(vertices, 0)), mstMatrix(nullptr) {}
-
-// Destructor
-Graph::~Graph(){
-    delete mstMatrix; // Clean up the allocated memory
-}
- 
 // Add edge to graph
 void Graph::addEdge(int u, int v, int weight){
-    if(u < 0 || u >= this->numVertices || v < 0 || v >= this->numVertices){
-        //throw std::runtime_error("Invalid vertices");
-        return;
-    }
-    else if(this->adjMatrix[u][v] != 0 || this->adjMatrix[v][u] != 0){
-        this->adjMatrix[u][v] = weight;
-        this->adjMatrix[v][u] = weight; // Assuming undirected graph
+    validateVertices(u, v);
+    if(this->graphMatrix[u][v] != 0 || this->graphMatrix[v][u] != 0){
+        this->graphMatrix[u][v] = weight;
+        this->graphMatrix[v][u] = weight; // Assuming undirected graph
         this->hasUpdatedMST = false;
         return;
     }else{
-        this->adjMatrix[u][v] = weight;
-        this->adjMatrix[v][u] = weight; // Assuming undirected graph
+        this->graphMatrix[u][v] = weight;
+        this->graphMatrix[v][u] = weight; // Assuming undirected graph
         this->numEdges++;
         this->hasUpdatedMST = false;
     }
@@ -31,22 +21,13 @@ void Graph::addEdge(int u, int v, int weight){
 
 // Remove edge from graph
 void Graph::removeEdge(int u, int v){
-    if(u < 0 || u >= this->numVertices || v < 0 || v >= this->numVertices){
-        //throw std::runtime_error("Invalid vertices");
-        return;
-    }else if(this->adjMatrix[u][v] == 0 || this->adjMatrix[v][u] == 0){
-        return;
-    }else{
-        this->adjMatrix[u][v] = 0;
-        this->adjMatrix[v][u] = 0;
+    validateVertices(u, v);
+    if(this->graphMatrix[u][v] != 0 || this->graphMatrix[v][u] != 0){
+        this->graphMatrix[u][v] = 0;
+        this->graphMatrix[v][u] = 0;
         this->numEdges--;
         this->hasUpdatedMST = false;
     }
-}
-
-// Get weight of edge
-int Graph::getEdgeWeight(int u, int v) const{
-    return this->adjMatrix[u][v];
 }
 
 // Get number of vertices
@@ -54,14 +35,9 @@ int Graph::getSizeVertices() const{
     return this->numVertices;
 }
 
-int Graph::getNumEdges() const
-{
-    return this->numEdges;
-}
-
 // Get adjacency matrix represent the graph
 const std::vector<std::vector<int>> &Graph::getGraph() const{
-    return this->adjMatrix;
+    return this->graphMatrix;
 }
 
 bool Graph::hasMST() const{
@@ -69,26 +45,16 @@ bool Graph::hasMST() const{
 }
 
 // Set adjacency matrix represent the MST
-void Graph::setMST(std::vector<std::vector<int>>* mst){
-    if(mst == nullptr){
+void Graph::setMST(std::unique_ptr<std::vector<std::vector<int>>> mst) {
+    if (!mst) {
         return;
-    }else if(this->mstMatrix != nullptr){
-        delete this->mstMatrix;
-        this->mstMatrix = nullptr;
     }
-
-    this->mstMatrix = mst;
-    this->hasUpdatedMST = true;
+    this->mstMatrix = std::move(mst);
+    hasUpdatedMST = true;
 }
 
 // Calculate and return the total weight of MST
-int Graph::getMSTTotalWeight() const
-{
-    if(!this->hasUpdatedMST){
-        std::cerr << "MST matrix is not set\n";
-        return 0;
-    }
-    
+int Graph::getMSTTotalWeight() const{
     int totalWeight = 0;
     for(int i = 0; i < this->numVertices; ++i){
         for(int j = i + 1; j < this->numVertices; ++j){
@@ -100,11 +66,6 @@ int Graph::getMSTTotalWeight() const
 
 // Return the highest weighted distance in the MST
 int Graph::getMSTLongestDistance() const {
-    if (!this->hasUpdatedMST) {
-        std::cerr << "MST matrix is not set\n";
-        return 0;
-    }
-
     int longestDistance = 0;
     int numVertices = this->numVertices;
 
@@ -125,7 +86,6 @@ int Graph::getMSTLongestDistance() const {
             }
         }
     }
-
     // Find the longest distance in the shortest path matrix - after finish updating
     for (int i = 0; i < numVertices; ++i) {
         for (int j = i + 1; j < numVertices; ++j) {
@@ -134,17 +94,11 @@ int Graph::getMSTLongestDistance() const {
             }
         }
     }
-
     return longestDistance;
 }
 
 //Return the average edge weight in the MST
 double Graph::getMSTAvgEdgeWeight() const{
-    if(!this->hasUpdatedMST){
-        std::cerr << "MST matrix is not set\n";
-        return 0.0;
-    }
-
     int numVertices = this->getSizeVertices();
     double totalWeight = 0.0;
     int edgeCount = 0;
@@ -160,21 +114,14 @@ double Graph::getMSTAvgEdgeWeight() const{
     if (edgeCount == 0) {
         return 0.0;
     }
-    
     return totalWeight / edgeCount;
 }
 
 int Graph::getMSTShortestDistance() const {
-    if (!this->hasUpdatedMST) {
-        std::cerr << "MST matrix is not set\n";
-        return 0;
-    }
-
     int shortestDistance = INT_MAX;
     int numVertices = this->numVertices;
 
-    // Use Floyd-Warshall algorithm to find the shortest path in the MST
-    std::vector<std::vector<int>> dist = *this->mstMatrix;
+    std::vector<std::vector<int>> dist = *this->mstMatrix;  // Use Floyd-Warshall algorithm to find the shortest path in the MST
 
     for (int k = 0; k < numVertices; ++k) {
         for (int i = 0; i < numVertices; ++i) {
@@ -199,15 +146,10 @@ int Graph::getMSTShortestDistance() const {
             }
         }
     }
-
     return (shortestDistance == INT_MAX) ? 0 : shortestDistance;
 }
 
 std::string Graph::printMST() const {
-    if(!this->hasUpdatedMST){
-        return "MST matrix is not set\n";
-    }
-
     std::stringstream mstString;
     for (int i = 0; i < this->numVertices; ++i) {
         for (int j = i + 1; j < this->numVertices; ++j) {
@@ -218,3 +160,10 @@ std::string Graph::printMST() const {
     }
     return mstString.str();
 }
+
+void Graph::validateVertices(int u, int v) const {
+    if (u < 0 || u >= numVertices || v < 0 || v >= numVertices) {
+        throw std::out_of_range("Vertex index out of bounds");
+    }
+}
+

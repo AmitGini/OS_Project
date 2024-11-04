@@ -2,7 +2,11 @@
 #include <iostream>
 
 void TaskQueue::enqueue(TaskType func, int& arg1, int arg2){
-    TaskData data{std::move(func), arg1, arg2}; 
+    TaskData data{
+        std::move(func),
+        arg1,
+        arg2
+    };
     taskQueue.push(std::move(data));
     std::cout << "Task enqueued, task number: " << arg2 << std::endl;
 }

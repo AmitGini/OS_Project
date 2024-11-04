@@ -3,7 +3,7 @@
 # Compiler settings
 CXX = g++
 CXXFLAGS = -g -std=c++17
-COVFLAGS = -fprofile-arcs -ftest-coverage
+COVFLAGS = --coverage -fprofile-arcs -ftest-coverage
 OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o TaskQueue.o
 
 # Default target
@@ -13,10 +13,18 @@ all: graph
 graph: $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-pcoverage: CXXFLAGS += $(COVFLAGS)
-pcoverage: graph
+coverage: CXXFLAGS += $(COVFLAGS)  # Add coverage flags
+coverage: graph # compile graph with coverage flags
+# Create the coverage directory
 	mkdir -p coverage
+# Run the program
+	-./graph -p -l
+	-./graph -k
+	-./graph asfasf 12312
+	-./graph
 	-./graph -p
+	-./graph -l
+# Generate coverage data
 	gcov main.cpp -o .
 	gcov Graph.cpp -o .
 	gcov KruskalStrategy.cpp -o .
@@ -26,31 +34,20 @@ pcoverage: graph
 	gcov PipeDP.cpp -o .
 	gcov ActiveObjectDP.cpp -o .
 	gcov TaskQueue.cpp -o .
-	gcov ActiveObjectDP.cpp -o .
 	gcov LeaderFollowerDP.cpp -o .
+# Generate coverage report
 	lcov --capture --directory . --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 
-lfcoverage: CXXFLAGS += $(COVFLAGS)
-lfcoverage: graph
-	mkdir -p coverage
-	-./graph -l
-	gcov main.cpp -o .
-	gcov Graph.cpp -o .
-	gcov KruskalStrategy.cpp -o .
-	gcov PrimStrategy.cpp -o .
-	gcov Server.cpp -o .
-	gcov RequestService.cpp -o .
-	gcov PipeDP.cpp -o .
-	gcov ActiveObjectDP.cpp -o .
-	gcov TaskQueue.cpp -o .
-	gcov LeaderFollowerDP.cpp -o .
-	lcov --capture --directory . --output-file coverage/coverage.info
-	genhtml coverage/coverage.info --output-directory coverage/html
-	
 valgrind: graph
-	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -p > valgrind_output_Pipeline.txt 2>&1
-	valgrind --leak-check=yes --track-origins=yes --gen-suppressions=all ./graph -l >> valgrind_output_LF.txt 2>&1
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --gen-suppressions=all ./graph -p >> valgrind_output_PipeAo.txt 2>&1
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --gen-suppressions=all ./graph -l >> valgrind_output_LF.txt 2>&1
+
+helgrind: graph
+	valgrind --verbose --log-file=helgrind_PipeActiveObject.log ./graph -p
+	valgrind --verbose --log-file=helgrind_LeaderFollower.log ./graph -l
+
+	
 
 # Rule to compile the source files
 main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipeDP.hpp LeaderFollowerDP.hpp
@@ -85,8 +82,10 @@ TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
 
 # Clean up
 clean:
-	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* valgrind_output.txt callgraph_report.txt
+	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* valgrind_output_LF.txt valgrind_output_PipeAo.txt helgrind_LeaderFollower.log helgrind_PipeActiveObject.log
 	rm -rf coverage profile_data callgraph_data out 
+	-fuser -k 4040/tcp
+	-sudo sysctl -w net.ipv4.tcp_tw_reuse=1
 
 # Declare phony targets
 .PHONY: all clean

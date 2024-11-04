@@ -2,11 +2,13 @@
 #define MSTSTRATEGY_HPP
 
 #include "Graph.hpp"
+#include <memory>
 #include <vector>
 
-class MSTStrategy{
+class MSTStrategy {
 public:
-    virtual std::vector<std::vector<int>>* computeMST(const Graph &graph) = 0;
+    virtual ~MSTStrategy() = default;
+    virtual std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph& graph) = 0;
 };
 
 #endif 

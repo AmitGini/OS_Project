@@ -3,39 +3,41 @@
 
 #include <vector>
 #include <sstream>
-#include <set>
-#include <iostream>
 #include <stdexcept>
 #include <climits>
+#include <memory>
 
 class Graph{
+private:
+    std::vector<std::vector<int>> graphMatrix;  // Adjacency matrix - graph representations
+    std::unique_ptr<std::vector<std::vector<int>>> mstMatrix;  // Smart pointer
+    int numVertices;
+    int numEdges;
+    bool hasUpdatedMST;  // Flag to check if MST has been updated
+
+    void validateVertices(int u, int v) const;
+
+
 public:
-    Graph(int vertices);  // Constructor
-    ~Graph();  // Destructor
+    Graph(int vertices);
+    ~Graph() = default;  // RAII - Destructor
     
     // Origin Graph Functions
     void addEdge(int u, int v, int weight);  // Add edge to graph
     void removeEdge(int u, int v);  // Remove edge from graph
-    int getEdgeWeight(int u, int v) const;  // Get weight of edge
     int getSizeVertices() const;  // Get number of vertices
-    int getNumEdges() const;  // Get number of edges
     const std::vector<std::vector<int>> &getGraph() const;  // Get adjacency matrix
     bool hasMST() const;  // Check if MST has been computed
     
     // MST Graph Functions - after activate MST Algorithm
-    void setMST(std::vector<std::vector<int>>* mst);  // Set adjacency matrix - MST representations
+    void setMST(std::unique_ptr<std::vector<std::vector<int>>> mst);
     int getMSTTotalWeight() const;
     int getMSTLongestDistance() const;
     int getMSTShortestDistance() const;
     double getMSTAvgEdgeWeight() const;
     std::string printMST() const;
 
-private:
-    int numVertices;
-    int numEdges;
-    std::vector<std::vector<int>> adjMatrix;  // Adjacency matrix - graph representations
-    std::vector<std::vector<int>>* mstMatrix;  // Adjacency matrix - MST representations
-    bool hasUpdatedMST;  // Flag to check if MST has been updated
+
 };
 
 #endif

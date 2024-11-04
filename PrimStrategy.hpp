@@ -2,14 +2,13 @@
 #define PRIMSTRATEGY_HPP
 
 #include "MSTStrategy.hpp"
-#include "Graph.hpp"
 #include <vector>
 #include <limits>
 #include <queue>
+#include <memory>
 
 class PrimStrategy : public MSTStrategy {
 public:
-    std::vector<std::vector<int>>* computeMST(const Graph &graph) override;
+    std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph& graph) override;
 };
-
-#endif 
+#endif

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
-std::vector<std::vector<int>>* PrimStrategy::computeMST(const Graph &graph) {
+std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Graph& graph) {
     int numVertices = graph.getSizeVertices();
     std::cout << "Number of vertices: " << numVertices << std::endl;
     
@@ -10,19 +10,12 @@ std::vector<std::vector<int>>* PrimStrategy::computeMST(const Graph &graph) {
     
     const auto& adjacencyMatrix = graph.getGraph();
     
-    // Debug: Print adjacency matrix
-    std::cout << "Adjacency Matrix:" << std::endl;
-    for (const auto& row : adjacencyMatrix) {
-        for (int weight : row) {
-            std::cout << weight << " ";
-        }
-        std::cout << std::endl;
-    }
-    
     std::vector<int> minEdgeToVertex(numVertices, std::numeric_limits<int>::max());
     std::vector<int> parentVertex(numVertices, -1);
     std::vector<bool> isInMST(numVertices, false);
-    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> minEdgeQueue;
+    std::priority_queue<std::pair<int, int>,
+                        std::vector<std::pair<int, int>>,
+                        std::greater<std::pair<int, int>>> minEdgeQueue;
     
     // Find the first non-isolated vertex
     int startVertex = 0;
@@ -59,7 +52,8 @@ std::vector<std::vector<int>>* PrimStrategy::computeMST(const Graph &graph) {
         }
     }
     
-    auto* mstMatrix = new std::vector<std::vector<int>>(numVertices, std::vector<int>(numVertices, 0));
+    auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
+        numVertices, std::vector<int>(numVertices, 0));
     
     std::cout << "Constructing MST:" << std::endl;
     for (int vertex = 0; vertex < numVertices; ++vertex) {
@@ -70,8 +64,6 @@ std::vector<std::vector<int>>* PrimStrategy::computeMST(const Graph &graph) {
             (*mstMatrix)[vertex][parent] = weight;
         }
     }
-    
-
     
     return mstMatrix;
 }

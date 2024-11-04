@@ -12,59 +12,69 @@ PipeDP::PipeDP() : isStageActive(false) {
 }
 
 PipeDP::~PipeDP() {
+    std::cout<<"**** Closing Pattern Type ****"<<std::endl;
     std::cout<<"Deleting PipeDP"<<std::endl;
-    for(auto& stage : stages) {
-        // Reset the unique pointer, so that the memory is released and the destructor of the object is called.
-        stage.reset();
-    }
-    
-    if (this->graph) {
-        delete this->graph;
-    }
+    this->isStageActive = false;
+    stages.clear();
     std::cout<<"Pipe And Active Objects has Closed"<<std::endl;
 }
 
 void PipeDP::setupPipe() {
-    // Create 4 stages
-    for(int i = STAGE_CREATE_GRAPH; i <= STAGE_CLIENT_EXIT; i++) {
-        stages.push_back(std::make_unique<ActiveObjectDP>());
+    try {
+        // Pre-allocate vector capacity
+        stages.reserve(STAGE_CLIENT_EXIT + 1);
+        
+        // Create stages with error checking
+        for(int i = STAGE_CREATE_GRAPH; i < STAGE_CLIENT_EXIT+ 1; ++i) {
+            std::cout <<"***** "<< "Creating stage " << i <<" *****"<<std::endl;
+            stages.push_back(std::make_shared<ActiveObjectDP>());
+            std::cout << "Stage " << i << " created successfully" << std::endl;
+        }
+        
+        std::cout<<"*******Here*******"<<std::endl;
+
+        // Set up the pipeline connections
+        stages[STAGE_CREATE_GRAPH]->setNextStage(stages[STAGE_MODIFY_GRAPH]);
+        stages[STAGE_MODIFY_GRAPH]->setNextStage(stages[STAGE_CALCULATE_MST]);
+        stages[STAGE_CALCULATE_MST]->setNextStage(stages[STAGE_MST_OPERATIONS]);
+        stages[STAGE_MST_OPERATIONS]->setNextStage(stages[STAGE_CLIENT_EXIT]);
+        stages[STAGE_CLIENT_EXIT]->setNextStage(stages[STAGE_CLIENT_EXIT]);
+
+        stages[STAGE_CREATE_GRAPH]->setPrevStageStatus(true);
+
+        // Define task handlers for each stage
+        stages[STAGE_CREATE_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            stages[STAGE_MODIFY_GRAPH]->updateNextStage(false);
+            stages[STAGE_CALCULATE_MST]->updateNextStage(false);
+            return createGraph(client_FD);
+        });
+
+        stages[STAGE_MODIFY_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            bool addOrRemoveEdge = (choice == 2); // 2 for add edge, 3 for remove edge
+            stages[STAGE_CALCULATE_MST]->updateNextStage(false);
+            stages[STAGE_MST_OPERATIONS]->updateNextStage(false);
+            return modifyGraph(client_FD, addOrRemoveEdge);
+        });
+
+        stages[STAGE_CALCULATE_MST]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            return calculateMST(client_FD);
+        });
+
+        stages[STAGE_MST_OPERATIONS]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            getMSTData(client_FD, choice);
+            return true;
+        });
+
+        stages[STAGE_CLIENT_EXIT]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            return stopClient(client_FD);
+        });
+        std::cout<<"Set Task Handler"<<std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Stage creation failed: " << e.what() << std::endl;
+        stages.clear();
+        throw;
     }
-    
-    // Set up the pipeline connections
-    stages[STAGE_CREATE_GRAPH]->setNextStage(stages[STAGE_MODIFY_GRAPH].get());  // stage to handle graph creation
-    stages[STAGE_MODIFY_GRAPH]->setNextStage(stages[STAGE_CALCULATE_MST].get());  // stage to handle graph modification
-    stages[STAGE_CALCULATE_MST]->setNextStage(stages[STAGE_MST_OPERATIONS].get());  // stage to handle MST calculation
-    stages[STAGE_MST_OPERATIONS]->setNextStage(stages[STAGE_CLIENT_EXIT].get());  // stage to handle MST operations
-    stages[STAGE_CLIENT_EXIT]->setNextStage(stages[STAGE_CLIENT_EXIT].get());  // stage to handle client exit
-    
-    stages[STAGE_CREATE_GRAPH]->setPrevStageStatus(true);
-
-    // Define task handlers for each stage
-    stages[STAGE_CREATE_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-        stages[STAGE_MODIFY_GRAPH]->updateNextStage(false);
-        stages[STAGE_CALCULATE_MST]->updateNextStage(false);
-        return createGraph(client_FD);
-    });
-
-    stages[STAGE_MODIFY_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-        bool addOrRemoveEdge = (choice == 2); // 2 for add edge, 3 for remove edge
-        stages[STAGE_CALCULATE_MST]->updateNextStage(false);
-        stages[STAGE_MST_OPERATIONS]->updateNextStage(false);
-        return modifyGraph(client_FD, addOrRemoveEdge);
-    });
-
-    stages[STAGE_CALCULATE_MST]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-        return calculateMST(client_FD);
-    });
-
-    stages[STAGE_MST_OPERATIONS]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-        getMSTData(client_FD, choice);
-        return true;
-    });
-
-    stages[4]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-        return stopClient(client_FD);
-    });
 }
 
 void PipeDP::handleRequest(int& client_FD) {

@@ -2,6 +2,7 @@
 #include "PipeDP.hpp"
 
 ActiveObjectDP::ActiveObjectDP() : working(false), prevStageStatus(false), nextStage(nullptr) {
+    taskQueue = std::make_unique<TaskQueue>();
     activeObjectThread = std::make_unique<std::thread>(&ActiveObjectDP::work, this);
 }
 
@@ -10,19 +11,20 @@ ActiveObjectDP::~ActiveObjectDP() {
         std::unique_lock<std::mutex> lock(activeTask_mutex);
         stop = true;
     }
+
     // Clear the queue and notify the thread
-    tasksQueue.clear();
-    activeTask_condition.notify_all();
+    this->taskQueue->clear();
+    this->activeTask_condition.notify_all();
 
     // Join the thread
-    if (activeObjectThread && activeObjectThread->joinable()) {
-        activeObjectThread->join();
+    if (this->activeObjectThread && this->activeObjectThread->joinable()) {
+        this->activeObjectThread->join();
     }
 }
 
-void ActiveObjectDP::setNextStage(ActiveObjectDP* next) {
+void ActiveObjectDP::setNextStage(std::shared_ptr<ActiveObjectDP> next) {
     this->nextStage = next;
-    if(nextStage == this) this->prevStageStatus = true;
+    if(nextStage.get() == this) this->prevStageStatus = true;
 }
 
 void ActiveObjectDP::setTaskHandler(TaskQueue::TaskType handler) {
@@ -30,17 +32,17 @@ void ActiveObjectDP::setTaskHandler(TaskQueue::TaskType handler) {
 }
 
 void ActiveObjectDP::enqueue(int& arg1, int arg2) {
-    if (currentHandler) {
-        tasksQueue.enqueue(currentHandler, arg1, arg2);
+    if (this->currentHandler) {
+        this->taskQueue->enqueue(this->currentHandler, arg1, arg2);
         notify();
     }
 }
 
 void ActiveObjectDP::work() {
     bool success = false;
-    while (!stop) {
+    while (!this->stop) {
         
-        if (tasksQueue.isEmpty()) {
+        if (taskQueue->isEmpty()) {
             this->working = false;
             this->activeTask_condition.notify_all();
 
@@ -48,7 +50,7 @@ void ActiveObjectDP::work() {
             std::cout<<"Stage Is Sleeping"<<std::endl;
 
             activeTask_condition.wait(lock, [this] {
-                return (!tasksQueue.isEmpty() && this->prevStageStatus) || stop;
+                return (!taskQueue->isEmpty() && this->prevStageStatus) || stop;
             });
             
             std::cout<<"Stage has Woke up"<<std::endl;
@@ -59,9 +61,9 @@ void ActiveObjectDP::work() {
             this->updateNextStage(success);
         
         }else if(!stop){
-            std::unique_lock<std::mutex> lock(activeTask_mutex);
+            std::unique_lock<std::mutex> lock(this->activeTask_mutex);
             this->working = true;
-            success = tasksQueue.executeTask();
+            success = taskQueue->executeTask();
             if (success) {
                 this->updateNextStage(success);
             }
@@ -71,24 +73,24 @@ void ActiveObjectDP::work() {
 }
 
 void ActiveObjectDP::setPrevStageStatus(bool status) {
-    if(this->nextStage && this->nextStage == this) return;  // The exit stage it its own next stage
+    if(this->nextStage && this->nextStage.get() == this) return;  // The exit stage it its own next stage
     this->prevStageStatus = status;  // My next stage ask my status (I am the previous stage of my Next Stage)
 }
 
 void ActiveObjectDP::updateNextStage(bool status) {
-    if (this->nextStage && this->nextStage == this) return;
+    if (this->nextStage && this->nextStage.get() == this) return;
     this->nextStage->setPrevStageStatus(status);
     std::cout<<"******** Notifying Next Stage ********"<<std::endl;    
-    nextStage->notify();
+    this->nextStage->notify();
 }
 
 void ActiveObjectDP::notify() {
-    if(this->nextStage && this->nextStage == this && tasksQueue.isEmpty()){
+    if(this->nextStage && this->nextStage.get() == this && taskQueue->isEmpty()){
         std::cout<<"****** Client has Disconnected ******"<<std::endl;
     }
-    else if (tasksQueue.isEmpty() || this->working || !this->prevStageStatus) {
+    else if (taskQueue->isEmpty() || this->working || !this->prevStageStatus) {
         std::cout<<"**** Failed to Notify The Stage Due: ****"<<std::endl;
-        int queueSize = tasksQueue.size();
+        int queueSize = taskQueue->size();
         std::cout<<"1. Number of Tasks in Queue: "<<queueSize<<std::endl;
         std::string message = this->working ? "True" : "False";
         std::cout<<"2. Working: "<<message<<std::endl;

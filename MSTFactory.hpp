@@ -14,13 +14,12 @@ public:
         Kruskal
     };
 
-public:
-    static MSTStrategy* createMSTStrategy(AlgorithmType type) {
+    static std::unique_ptr<MSTStrategy> createMSTStrategy(AlgorithmType type) {
         switch (type) {
             case AlgorithmType::Kruskal:
-                return new KruskalStrategy();
+                return std::make_unique<KruskalStrategy>();
             case AlgorithmType::Prim:
-                return new PrimStrategy();
+                return std::make_unique<PrimStrategy>();
             default:
                 throw std::invalid_argument("Unknown MST Algorithm Type");
         }

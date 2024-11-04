@@ -11,15 +11,16 @@ class PipeDP;
 
 class ActiveObjectDP {
 private:
-    TaskQueue tasksQueue;
+    std::atomic<bool> stop{false};
+    std::unique_ptr<std::thread> activeObjectThread;
+    std::unique_ptr<TaskQueue> taskQueue;
+    std::shared_ptr<ActiveObjectDP> nextStage;
     std::mutex activeTask_mutex;
     std::condition_variable activeTask_condition;
-    std::unique_ptr<std::thread> activeObjectThread;
-    std::atomic<bool> stop{false};
-    ActiveObjectDP* nextStage;
+
+    TaskQueue::TaskType currentHandler;
     bool prevStageStatus;
     bool working;
-    TaskQueue::TaskType currentHandler;
     
     void work();
 
@@ -27,7 +28,7 @@ public:
     ActiveObjectDP();
     ~ActiveObjectDP();
     void enqueue(int& arg1, int arg2);
-    void setNextStage(ActiveObjectDP* next);
+    void setNextStage(std::shared_ptr<ActiveObjectDP> next);
     void setTaskHandler(TaskQueue::TaskType handler);
     void setPrevStageStatus(bool status);
     void updateNextStage(bool status);

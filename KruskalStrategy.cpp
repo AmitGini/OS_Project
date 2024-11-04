@@ -16,7 +16,7 @@ bool KruskalStrategy::hasCycle(int current, int parent, const std::vector<std::v
     return false;
 }
 
-std::vector<std::vector<int>>* KruskalStrategy::computeMST(const Graph &graph) {
+std::unique_ptr<std::vector<std::vector<int>>> KruskalStrategy::computeMST(const Graph& graph) {
     int numVertices = graph.getSizeVertices();
     const auto& adjMatrix = graph.getGraph();
     std::vector<std::tuple<int, int, int>> edges; // (weight, src, dest) To keep track of included edges for sorting and processing
@@ -30,7 +30,9 @@ std::vector<std::vector<int>>* KruskalStrategy::computeMST(const Graph &graph) {
         }
     }
 
-    auto* mstMatrix = new std::vector<std::vector<int>>(numVertices, std::vector<int>(numVertices, 0)); // Initialize MST matrix
+    auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
+        numVertices, std::vector<int>(numVertices, 0));
+    
     std::sort(edges.begin(), edges.end());  // Sort edges by their weights
     int edgesAdded = 0;
 

@@ -12,9 +12,9 @@
 class PipeDP : public RequestService {
 private:
     // Private members
-    std::vector<std::unique_ptr<ActiveObjectDP>> stages;
+    std::vector<std::shared_ptr<ActiveObjectDP>> stages;
     std::mutex pipeMtx;
-    bool isStageActive;
+    std::atomic<bool> isStageActive;
 
     // Private methods
     void setupPipe();  // Setup the pipe with active objects

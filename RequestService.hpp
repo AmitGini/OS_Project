@@ -20,11 +20,10 @@
 class RequestService {
 protected:
     std::mutex graphMutex;  // Mutex for graph operations
-    Graph* graph = nullptr;  // Pointer to a Graph object
+    std::unique_ptr<Graph> graph;  // Smart Pointer to a Graph object
     char buffer[1024];  // Buffer for reading and writing data
 
 public:
-    virtual ~RequestService() = default;  // Virtual destructor to ensure proper cleanup in derived classes
     virtual void handleRequest(int& client_FD) = 0;  // Pure virtual function to be implemented by derived classes to handle requests
     void sendMessage(int &client_FD, const std::string& message);  // Sends a message to a client
     int startConversation(int &client_FD);  // Initiates conversation with a client, presenting a menu and handling input

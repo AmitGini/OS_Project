@@ -20,6 +20,8 @@ LeaderFollowerDP::LeaderFollowerDP() : leaderIndex(NO_LEADER), stop(false), clie
 }
 
 LeaderFollowerDP::~LeaderFollowerDP() {
+    std::cout<<"**** Closing Pattern Type ****"<<std::endl;
+    std::cout<<"Deleting Leader-Follower"<<std::endl;
     {
         std::lock_guard<std::mutex> lock(mtx);
         this->stop = true;
@@ -33,7 +35,6 @@ LeaderFollowerDP::~LeaderFollowerDP() {
             thread.join();
         }
     }
-    
     tasksQueue.clear();
     std::cout<<"Leader Follower Threads has Closed!"<<std::endl;
 }
@@ -165,9 +166,7 @@ bool LeaderFollowerDP::enqueingChoices(int choice){
             
         case 0: // Start Executing the tasks 
             return false; // return value false execute the tasks
-
-        default:
-            sendMessage(this->client_fd, "Invalid choice. Please try again.\n");
+        default:  // Invalid choice - return to conversation
             return true;
     }
 
