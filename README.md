@@ -1,17 +1,18 @@
 
-## OS Project - MST, Strategy/Factory, Client-Server, Threads, Active Object, Thread Pool (Leader-Follower) and Valgrind
+# OS Project - MST, Strategy/Factory, Client-Server, Threads, Active Object, Thread Pool (Leader-Follower) and Valgrind
 
-## Overview
+### Overview
 
-This project implements various design patterns and algorithms in C++ including:
-- Minimum Spanning Tree (MST) algorithms (Prim's and Kruskal's)
-- Strategy and Factory design patterns
-- Client-Server architecture
-- Active Object pattern
-- Thread Pool using Leader-Follower pattern
-- Memory leak detection using Valgrind
+This project implements various **design patterns** and **algorithms** in **C++** including:
+- **Minimum Spanning Tree** (MST) algorithms (Prim's and Kruskal's).
+- **Strategy** and **Factory** design patterns.
+- **Client-Server** architecture.
+- **Active Object** pattern.
+- **Thread Pool** using **Leader-Follower** pattern.
+- **Memory leak detection** using Valgrind.
+- **Race Condition, Deadlocks, Thread Safety Analysis**, using Helgrind.
 
-## Project Structure
+### Project Structure
 
 - **Graph**: Implements graph data structure and MST algorithms.
 - **MSTStrategy**: Abstract class for MST algorithms.
