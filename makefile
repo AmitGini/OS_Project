@@ -3,7 +3,6 @@
 # Compiler settings
 CXX = g++
 CXXFLAGS = -g -std=c++17
-COVFLAGS = --coverage -fprofile-arcs -ftest-coverage
 OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o TaskQueue.o
 
 # Default target
@@ -48,29 +47,47 @@ callgraph_lf: client_lf_script.sh graph
 	callgrind_annotate $$callgrind_file > callgraph_report_LF.txt && \
 	mv $$callgrind_file callgraph_data_LF.txt
 
-# Generate code coverage
-coverage: CXXFLAGS += -fprofile-arcs -ftest-coverage
-coverage: LDFLAGS += -fprofile-arcs
+coverage: CXXFLAGS += --coverage -fprofile-arcs -ftest-coverage
 coverage: graph
-# Start server with Pipe pattern
+# Create the coverage directory
+	mkdir -p coverage
+# Run Invalid input tests
+	-./graph -p -l
+	-./graph -k
+	-./graph asfasf 12312
+	-./graph
+
+# Test Pipe Active Object implementation
+	chmod +x client_script.sh
 	./graph -p & echo $$! > server_pid.txt
 	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
 	./client_script.sh || true
-	sleep 1 && kill $$(cat server_pid.txt)
+	kill $$(cat server_pid.txt) || true
+	sleep 2
 
-# Start server with Leader-Follower pattern
+# Test Leader Follower implementation
+	chmod +x client_lf_script.sh
 	./graph -l & echo $$! > server_pid.txt
 	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
 	./client_lf_script.sh || true
-	sleep 1 && kill $$(cat server_pid.txt)
+	kill $$(cat server_pid.txt) || true
+	sleep 2
 
-# Generate coverage reports
-	gcov main.cpp Graph.cpp KruskalStrategy.cpp PrimStrategy.cpp Server.cpp \
-		RequestService.cpp PipeDP.cpp ActiveObjectDP.cpp LeaderFollowerDP.cpp TaskQueue.cpp
+# Generate coverage data
+	gcov main.cpp -o .
+	gcov Graph.cpp -o .
+	gcov KruskalStrategy.cpp -o .
+	gcov PrimStrategy.cpp -o .
+	gcov Server.cpp -o .
+	gcov RequestService.cpp -o .
+	gcov PipeDP.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov TaskQueue.cpp -o .
+	gcov LeaderFollowerDP.cpp -o .
 
-# Create lcov report
-	lcov --capture --directory . --output-file coverage.info
-	genhtml coverage.info --output-directory coverage
+# Generate coverage report
+	lcov --capture --directory . --output-file coverage/coverage.info
+	genhtml coverage/coverage.info --output-directory coverage/html
 
 # Run Memcheck for Pipe Active Object
 memcheck_pipe: client_script.sh graph
@@ -161,7 +178,10 @@ TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
 
 # Clean up
 clean:
-	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log
+	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info
+	rm -rf coverage profile_data callgraph_data out
+	-fuser -k 4040/tcp
+	-sudo sysctl -w net.ipv4.tcp_tw_reuse=1
 
 # Declare phony targets
 .PHONY: all clean
