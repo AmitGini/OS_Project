@@ -3,16 +3,6 @@
 Graph::Graph(int vertices): numVertices(vertices), numEdges(0), hasUpdatedMST(false),
         graphMatrix(vertices, std::vector<int>(vertices, 0)){}
 
-Graph::~Graph(){
-    if(!graphMatrix.empty()){
-        this->graphMatrix.clear();
-    }
-    if(mstMatrix != nullptr && !mstMatrix->empty()){
-        this->mstMatrix->clear();
-        this->mstMatrix.reset();
-    }
-}
-
 // Add edge to graph
 void Graph::addEdge(int u, int v, int weight){
     validateVertices(u, v);
@@ -59,21 +49,8 @@ void Graph::setMST(std::unique_ptr<std::vector<std::vector<int>>> mst) {
     if (!mst) {
         return;
     }
-    this->mstMatrix.reset();
     this->mstMatrix = std::move(mst);
     hasUpdatedMST = true;
-}
-
-void Graph::clearGraph(){
-    if(!graphMatrix.empty()){
-        this->graphMatrix.clear();
-    }
-    if(mstMatrix != nullptr && !mstMatrix->empty()){
-        this->mstMatrix->clear();
-        this->mstMatrix.reset();
-    }
-    this->numEdges = 0;
-    this->hasUpdatedMST = false;
 }
 
 // Calculate and return the total weight of MST

@@ -20,7 +20,7 @@ private:
 
 public:
     Graph(int vertices);
-    ~Graph();  // RAII - Destructor
+    ~Graph() = default;  // RAII - Destructor
     
     // Origin Graph Functions
     void addEdge(int u, int v, int weight);  // Add edge to graph
@@ -31,12 +31,13 @@ public:
     
     // MST Graph Functions - after activate MST Algorithm
     void setMST(std::unique_ptr<std::vector<std::vector<int>>> mst);
-    void clearGraph();
     int getMSTTotalWeight() const;
     int getMSTLongestDistance() const;
     int getMSTShortestDistance() const;
     double getMSTAvgEdgeWeight() const;
     std::string printMST() const;
+
+
 };
 
 #endif

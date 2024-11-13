@@ -11,21 +11,22 @@ class PipeDP;
 
 class ActiveObjectDP {
 private:
-    std::atomic<bool> stop{false};
-    std::unique_ptr<std::thread> activeObjectThread;
-    std::unique_ptr<TaskQueue> taskQueue;
-    std::shared_ptr<ActiveObjectDP> nextStage;
-    std::mutex activeTask_mutex;
-    std::condition_variable activeTask_condition;
+    std::atomic<bool> stop{false}; // Flag to stop the thread
+    std::unique_ptr<std::thread> activeObjectThread; // Thread for the active object
+    std::unique_ptr<TaskQueue> taskQueue; // Task queue for the active object
+    std::shared_ptr<ActiveObjectDP> nextStage; // Pointer to the next stage
+    std::mutex activeTask_mutex; // Mutex for the active task
+    std::condition_variable activeTask_condition; // Condition variable for the active task
+    int stageID; // ID of the stage
 
-    TaskQueue::TaskType currentHandler;
-    bool prevStageStatus;
-    bool working;
+    TaskQueue::TaskType currentHandler; // Task handler for the active object
+    bool prevStageStatus; // Flag to check if the previous stage is active
+    bool working; // Flag to check if the active object is working
     
     void work();
 
 public:
-    ActiveObjectDP();
+    ActiveObjectDP(int stage);
     ~ActiveObjectDP();
     void enqueue(int& arg1, int arg2);
     void setNextStage(std::shared_ptr<ActiveObjectDP> next);
@@ -34,7 +35,6 @@ public:
     void updateNextStage(bool status);
     void notify();
     void makePipeWait(std::mutex &pipeMtx, PipeDP *pipe);
-    void clearActiveObject();
     bool isActive();
 };
 #endif

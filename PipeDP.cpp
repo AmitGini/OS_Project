@@ -5,62 +5,35 @@
 #define STAGE_CALCULATE_MST 2
 #define STAGE_MST_OPERATIONS 3
 #define STAGE_CLIENT_EXIT 4
-#define STAGE_UNDEFINE -1
+#define STAGE_UNDEFINE -1 // Undefined stage for error handling
 
 PipeDP::PipeDP() : isStageActive(false) {
     setupPipe();
 }
 
 PipeDP::~PipeDP() {
-    std::cout<<"**** Deleting Pipe ****"<<std::endl;
-    {
-        std::lock_guard<std::mutex> lock(this->pipeMtx);
-        this->isStageActive = false;
-        std::cout<<"Pipe: Make Sure All Stages Done Working"<<std::endl;
-        for(auto& stage : stages) {
-            if(stage->isActive()) {
-                stage->makePipeWait(this->pipeMtx, this);
-                sleep(0.5);  // Sleep for 1 second in case next stages are still active, to avoid conition race
-            }
-            stage->clearActiveObject();  // Clear queue and reset the shared pointer of the queue and next stage
-        }
-    }
-    if(!isStageActive){
-        std::cout<<"Pipe: All Stages Done Working"<<std::endl;
-        for(auto stage : stages) {
-            if(stage){
-                stage.reset();  // Reset the shared pointer
-            }
-        }
-        std::cout<<"Pipe: Clear Stages"<<std::endl;
-        stages.clear();  // Clear the vector of stages
-    } else {
-        std::cout<<"********* Failed to Close PipeDP *********"<<std::endl;
-    }
-    
-    if(graph){
-        std::cout<<"Pipe: Close Graph"<<std::endl;
-        this->graph->clearGraph();  // Clear the graph
-        this->graph.reset();  // Reset the shared pointer of the graph
-    }
-    std::cout<<"********* Pipe: Done *********"<<std::endl;
+    std::cout<<"**** Closing Pattern Type ****"<<std::endl;
+    std::cout<<"Deleting PipeDP"<<std::endl;
+    this->isStageActive = false;
+    stages.clear();
+    std::cout<<"Pipe And Active Objects has Closed"<<std::endl;
 }
 
+// define the task handlers for each stage
 void PipeDP::setupPipe() {
     try {
-
-        stages.reserve(STAGE_CLIENT_EXIT + 1);
+        // Pre-allocate vector capacity
+        stages.reserve(STAGE_CLIENT_EXIT + 1); 
         
-        for(int i = STAGE_CREATE_GRAPH; i <= STAGE_CLIENT_EXIT; ++i) {
+        // Create stages with error checking
+        for(int i = STAGE_CREATE_GRAPH; i < STAGE_CLIENT_EXIT+ 1; ++i) {
             std::cout <<"***** "<< "Creating stage " << i <<" *****"<<std::endl;
-            auto stage = std::make_shared<ActiveObjectDP>();
-            if (!stage) {
-                throw std::runtime_error("Failed to create stage");
-            }
-            stages.push_back(std::move(stage));  // Use move semantics
+            stages.push_back(std::make_shared<ActiveObjectDP>(i)); // Create a shared pointer to an active object
             std::cout << "Stage " << i << " created successfully" << std::endl;
         }
         
+        std::cout<<"*******Here*******"<<std::endl;
+
         // Set up the pipeline connections
         stages[STAGE_CREATE_GRAPH]->setNextStage(stages[STAGE_MODIFY_GRAPH]);
         stages[STAGE_MODIFY_GRAPH]->setNextStage(stages[STAGE_CALCULATE_MST]);
@@ -68,43 +41,44 @@ void PipeDP::setupPipe() {
         stages[STAGE_MST_OPERATIONS]->setNextStage(stages[STAGE_CLIENT_EXIT]);
         stages[STAGE_CLIENT_EXIT]->setNextStage(stages[STAGE_CLIENT_EXIT]);
 
-        std::cout<<"Finish Set Next Stages"<<std::endl;
-
-        stages[STAGE_CREATE_GRAPH]->setPrevStageStatus(true);
+        stages[STAGE_CREATE_GRAPH]->setPrevStageStatus(true); // Set the first stage to active (because it's the first stage)
 
         // Define task handlers for each stage
         stages[STAGE_CREATE_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
-            stages[STAGE_MODIFY_GRAPH]->updateNextStage(false);
-            stages[STAGE_CALCULATE_MST]->updateNextStage(false);
+            std::cout<<"Set Task Handler for stage 0"<<std::endl;
             return createGraph(client_FD);
+            
+            
         });
 
         stages[STAGE_MODIFY_GRAPH]->setTaskHandler([this](int &client_FD, int choice) -> bool {
             bool addOrRemoveEdge = (choice == 2); // 2 for add edge, 3 for remove edge
-            stages[STAGE_CALCULATE_MST]->updateNextStage(false);
-            stages[STAGE_MST_OPERATIONS]->updateNextStage(false);
+            std::cout<<"Set Task Handler for stage 1"<<std::endl;
             return modifyGraph(client_FD, addOrRemoveEdge);
+
         });
 
         stages[STAGE_CALCULATE_MST]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            std::cout<<"Set Task Handler for stage 2"<<std::endl;
             return calculateMST(client_FD);
+            
+
         });
 
         stages[STAGE_MST_OPERATIONS]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            std::cout<<"Set Task Handler for stage 3"<<std::endl;
             getMSTData(client_FD, choice);
-            return true;
+            return true; 
         });
 
         stages[STAGE_CLIENT_EXIT]->setTaskHandler([this](int &client_FD, int choice) -> bool {
+            std::cout<<"Set Task Handler for stage 4"<<std::endl;
             return stopClient(client_FD);
+            
         });
-        std::cout<<"Set Task Handler"<<std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "Stage creation failed: " << e.what() << std::endl;
-        for(auto& stage : stages) {
-            stage.reset();
-        }
         stages.clear();
         throw;
     }
@@ -125,16 +99,13 @@ void PipeDP::handleRequest(int& client_FD) {
         switch (choice) {
             case 1: // Create graph
                 this->stages[STAGE_CREATE_GRAPH]->enqueue(client_FD, choice);
-                this->stages[STAGE_CREATE_GRAPH]->notify();
                 break;
             case 2: // Add edge
             case 3: // Remove edge
                 this->stages[STAGE_MODIFY_GRAPH]->enqueue(client_FD, choice);
-                this->stages[STAGE_MODIFY_GRAPH]->notify();
                 break;
             case 4: // Compute MST
                 this->stages[STAGE_CALCULATE_MST]->enqueue(client_FD, choice);
-                this->stages[STAGE_CALCULATE_MST]->notify();
                 break;
             case 5: // MST operations
             case 6:
@@ -142,18 +113,17 @@ void PipeDP::handleRequest(int& client_FD) {
             case 8:
             case 9:
                 this->stages[STAGE_MST_OPERATIONS]->enqueue(client_FD, choice);
-                this->stages[STAGE_MST_OPERATIONS]->notify();
                 break;
             case 10: // Exit
                 this->stages[STAGE_CLIENT_EXIT]->enqueue(client_FD, choice);
-                this->stages[STAGE_CLIENT_EXIT]->notify();
                 return;
         }
         
+        // Wait for the stages to finish their work
         for(auto& stage : stages) {
             if(stage->isActive()) {
                 stage->makePipeWait(this->pipeMtx, this);
-                sleep(0.5);  // Sleep for 1 second in case next stages are still active, to avoid conition race
+                sleep(1);  // Sleep for 1 second in case next stages are still active, to avoid conition race
             }
         }
         

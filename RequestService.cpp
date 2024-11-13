@@ -1,14 +1,5 @@
 #include "RequestService.hpp"
 
-RequestService::~RequestService(){
-    std::cout<<"***** Deleting Request Service *****"<<std::endl;
-    if(graph){
-        std::cout<<"Request Service: Deleting Graph "<<std::endl;
-        this->graph->clearGraph();  // Clear the graph
-        this->graph.reset();  // Reset the shared pointer of the graph
-    }
-    std::cout<<"***** Request Service: Done *****"<<std::endl;
-}
 
 // Send a message to the client
 void RequestService::sendMessage(int &client_FD, const std::string& message) {
@@ -79,7 +70,6 @@ bool RequestService::createGraph(int &client_FD){
             throw std::invalid_argument("Invalid number of vertices");
         }
 
-        if(graph) graph.reset();  // Reset the graph
         graph = std::make_unique<Graph>(numVertices);  // Create a new graph
         
         // Send acknowledgment to client
@@ -196,7 +186,6 @@ bool RequestService::calculateMST(int &client_FD) {
             graph->setMST(std::move(mst));
             message = "MST computed using " + std::string(choice == 1 ? "Prim's" : "Kruskal's") + " Algorithm.\n";
             sendMessage(client_FD, message);
-            if(mst) mst.reset();
         } else {
             return false;
         }
@@ -258,16 +247,11 @@ bool RequestService::getMSTData(int &client_FD, int choice) {
     return true;
 }
 
-bool RequestService::stopClient(int &client_FD){
-    if(client_FD < 0) {
+bool RequestService::stopClient(int &client_FD) {
+    if (client_FD < 0) {
         std::perror("Error: Invalid client file descriptor.");
         return false;
     }
-    if(client_FD >= 0){
-        std::string message = "\nIts not you its me, Bye Bye.";
-        sendMessage(client_FD, message);
-        close(client_FD);
-        std::cout<<"Client Connection Closed"<<std::endl;
-    }
+    std::cout << "Client Connection Closed" << std::endl;
     return true;
 }
