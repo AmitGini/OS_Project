@@ -1,0 +1,73 @@
+        -:    0:Source:PrimStrategy.cpp
+        -:    0:Graph:./PrimStrategy.gcno
+        -:    0:Data:./PrimStrategy.gcda
+        -:    0:Runs:5
+        -:    1:#include "PrimStrategy.hpp"
+        -:    2:#include <iostream>
+        -:    3:#include <algorithm>
+        -:    4:
+        5:    5:std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Graph& graph) {
+        5:    6:    int numVertices = graph.getSizeVertices();
+        5:    7:    std::cout << "Number of vertices: " << numVertices << std::endl;
+        -:    8:    
+       5*:    9:    if (numVertices == 0) return nullptr;
+        -:   10:    
+        5:   11:    const auto& adjacencyMatrix = graph.getGraph();
+        -:   12:    
+        5:   13:    std::vector<int> minEdgeToVertex(numVertices, std::numeric_limits<int>::max());
+        5:   14:    std::vector<int> parentVertex(numVertices, -1);
+        5:   15:    std::vector<bool> isInMST(numVertices, false);
+        -:   16:    std::priority_queue<std::pair<int, int>,
+        -:   17:                        std::vector<std::pair<int, int>>,
+        5:   18:                        std::greater<std::pair<int, int>>> minEdgeQueue;
+        -:   19:    
+        -:   20:    // Find the first non-isolated vertex
+        5:   21:    int startVertex = 0;
+       18:   22:    for (int i = 0; i < numVertices; ++i) {
+       93:   23:        if (std::any_of(adjacencyMatrix[i].begin(), adjacencyMatrix[i].end(), [](int w) { return w != 0; })) {
+        3:   24:            startVertex = i;
+        3:   25:            break;
+        -:   26:        }
+        -:   27:    }
+        -:   28:    
+        5:   29:    std::cout << "Starting from vertex: " << startVertex << std::endl;
+        -:   30:    
+        5:   31:    minEdgeToVertex[startVertex] = 0;
+        5:   32:    minEdgeQueue.push({0, startVertex});
+        -:   33:    
+       13:   34:    while (!minEdgeQueue.empty()) {
+        8:   35:        int currentVertex = minEdgeQueue.top().second;
+        8:   36:        minEdgeQueue.pop();
+        -:   37:        
+       8*:   38:        if (isInMST[currentVertex]) continue;
+        -:   39:        
+        8:   40:        isInMST[currentVertex] = true;
+        -:   41:        
+        8:   42:        std::cout << "Processing vertex: " << currentVertex << std::endl;
+        -:   43:        
+       48:   44:        for (int adjacentVertex = 0; adjacentVertex < numVertices; ++adjacentVertex) {
+       40:   45:            int weight = adjacencyMatrix[currentVertex][adjacentVertex];
+       40:   46:            if (weight != 0 && !isInMST[adjacentVertex] && weight < minEdgeToVertex[adjacentVertex]) {
+        3:   47:                parentVertex[adjacentVertex] = currentVertex;
+        3:   48:                minEdgeToVertex[adjacentVertex] = weight;
+        3:   49:                minEdgeQueue.push({weight, adjacentVertex});
+        -:   50:                
+        -:   51:            }
+        -:   52:        }
+        -:   53:    }
+        -:   54:    
+        -:   55:    auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
+       10:   56:        numVertices, std::vector<int>(numVertices, 0));
+        -:   57:    
+        5:   58:    std::cout << "Constructing MST:" << std::endl;
+       30:   59:    for (int vertex = 0; vertex < numVertices; ++vertex) {
+       25:   60:        int parent = parentVertex[vertex];
+       25:   61:        if (parent != -1) {
+        3:   62:            int weight = adjacencyMatrix[parent][vertex];
+        3:   63:            (*mstMatrix)[parent][vertex] = weight;
+        3:   64:            (*mstMatrix)[vertex][parent] = weight;
+        -:   65:        }
+        -:   66:    }
+        -:   67:    
+        5:   68:    return mstMatrix;
+        5:   69:}

@@ -1,0 +1,147 @@
+        -:    0:Source:ActiveObjectDP.cpp
+        -:    0:Graph:./ActiveObjectDP.gcno
+        -:    0:Data:./ActiveObjectDP.gcda
+        -:    0:Runs:5
+        -:    1:#include "ActiveObjectDP.hpp"
+        -:    2:#include "PipeDP.hpp"
+        -:    3:
+        5:    4:ActiveObjectDP::ActiveObjectDP(int stage) : stageID(stage), working(false), prevStageStatus(false), nextStage(nullptr) {
+        5:    5:    taskQueue = std::make_unique<TaskQueue>(); // Create a new task queue for the active object
+        5:    6:    activeObjectThread = std::make_unique<std::thread>(&ActiveObjectDP::work, this); // Create a new thread for the active object
+        5:    7:}
+        -:    8:
+    #####:    9:ActiveObjectDP::~ActiveObjectDP() {
+        -:   10:    {
+    #####:   11:        std::unique_lock<std::mutex> lock(activeTask_mutex); // Lock the mutex
+    #####:   12:        stop = true; // Set the stop flag to true to stop the thread
+    #####:   13:    }
+        -:   14:
+        -:   15:    // Clear the queue and notify the thread
+    #####:   16:    this->taskQueue->clear();
+    #####:   17:    this->activeTask_condition.notify_all(); // notify all the threads waiting on the condition variable to check the stop flag
+        -:   18:
+        -:   19:    // Join the thread
+    #####:   20:    if (this->activeObjectThread && this->activeObjectThread->joinable()) { // Check if the thread is joinable 
+    #####:   21:        this->activeObjectThread->join(); // Join the thread (wait for the thread to finish)
+        -:   22:    }
+    #####:   23:}
+        -:   24:
+        -:   25:// Set the next stage
+        5:   26:void ActiveObjectDP::setNextStage(std::shared_ptr<ActiveObjectDP> next) {
+        5:   27:    this->nextStage = next;
+        5:   28:    if(nextStage.get() == this) this->prevStageStatus = true; // If the next stage is the same as this stage, set the previous stage status to true
+        5:   29:}
+        -:   30:
+        -:   31:// Set the task handler
+        5:   32:void ActiveObjectDP::setTaskHandler(TaskQueue::TaskType handler) {
+        5:   33:    this->currentHandler = handler; // Set the task handler to the provided handler
+        5:   34:}
+        -:   35:
+        -:   36:// Enqueue a task
+       17:   37:void ActiveObjectDP::enqueue(int& arg1, int arg2) {
+       17:   38:    if (this->currentHandler) { // Check if the task handler is set
+       17:   39:        this->taskQueue->enqueue(this->currentHandler, arg1, arg2); // Enqueue the task with the provided arguments
+       17:   40:        notify(); // Notify the thread to start working
+        -:   41:    }
+       17:   42:}
+        -:   43:
+        -:   44:// The main work function for the active object
+        5:   45:void ActiveObjectDP::work() {
+        5:   46:    bool success = false; // Flag to check if the task was successful, set to false by default
+        -:   47:    
+        -:   48:    // infinite loop till the stop flag is set to true so that the thread can be stopped
+       39:   49:    while (!this->stop) { // Loop until the stop flag is set
+        -:   50:        
+       39:   51:        if (taskQueue->isEmpty()) { // Check if the task queue is empty
+       22:   52:            this->working = false; // Set the working flag to false
+       22:   53:            this->activeTask_condition.notify_all(); // Notify all the threads waiting on the condition variable
+        -:   54:
+       22:   55:            std::unique_lock<std::mutex> lock(activeTask_mutex);
+       22:   56:             std::cout << "Stage " << stageID << " (Thread " << std::this_thread::get_id() << ") is sleeping" << std::endl;
+        -:   57:            
+        -:   58:            // Wait until a task is enqueued and the previous stage is done working or the stop flag is set
+       22:   59:            activeTask_condition.wait(lock, [this] {
+       39:   60:                return (!taskQueue->isEmpty() && this->prevStageStatus) || stop;
+        -:   61:            });
+        -:   62:            
+       17:   63:            std::cout << "Stage " << stageID << " (Thread " << std::this_thread::get_id() << ") has woke up" << std::endl;
+        -:   64:        
+       34:   65:        } else if(!this->prevStageStatus) { // Check if the previous stage is active
+    #####:   66:            success = false; // Set the success flag to false
+    #####:   67:            this->working = false; // Set the working flag to false so that the stage needs to wait
+    #####:   68:            this->updateNextStage(success); // Update the next stage with the success flag (false) to stop the next stage
+        -:   69:        
+       17:   70:        }else if(!stop){ // Check if the stop flag is not set
+       17:   71:            std::unique_lock<std::mutex> lock(this->activeTask_mutex); // Lock the mutex for the active task
+       17:   72:            this->working = true; // Set the working flag to true
+       17:   73:            success = taskQueue->executeTask(); // Execute the task and store the result in the success flag
+       17:   74:            if (success) { // Check if the task was successful 
+       13:   75:                this->updateNextStage(success); // Update the next stage with the success flag
+        -:   76:            }
+        -:   77:
+      17*:   78:        } else return;  // If the stop flag is set, return to stop the thread
+        -:   79:    }
+        -:   80:}
+        -:   81:
+        -:   82:// Set the previous stage status
+       13:   83:void ActiveObjectDP::setPrevStageStatus(bool status) {
+       13:   84:    if(this->nextStage && this->nextStage.get() == this) return;  // If the next stage is the same as this stage, return because the next stage is not set (exit condition)
+        7:   85:    this->prevStageStatus = status;  // Set the previous stage status to the provided status
+        -:   86:}
+        -:   87:
+        -:   88:// Update the next stage
+       13:   89:void ActiveObjectDP::updateNextStage(bool status) {
+       13:   90:    if (this->nextStage && this->nextStage.get() == this) return; // If the next stage is the same as this stage, return because the next stage is not set (exit condition)
+       12:   91:    this->nextStage->setPrevStageStatus(status); // Set the previous stage status of the next stage to the provided status (this stage's success status)
+       12:   92:    std::cout<<"******** Notifying Next Stage (Stage number: "<< this->nextStage->stageID <<") ********"<<std::endl;    
+       12:   93:    if (this->stageID == 4) { // Check if the next stage is the client exit stage
+    #####:   94:        std::cout<<"****** Client has Disconnected ******"<<std::endl;
+        -:   95:    } else {
+       12:   96:    this->nextStage->notify(); // Notify the next stage
+        -:   97:    }
+        -:   98:}
+        -:   99:
+        -:  100:// Notify the stage
+       29:  101:void ActiveObjectDP::notify() {
+        -:  102:    // Check if the task queue is empty, the stage is working, or the previous stage is not active
+       29:  103:    if (taskQueue->isEmpty() || this->working || !this->prevStageStatus) { 
+       12:  104:        if (this->prevStageStatus){
+       12:  105:            std::cout<<"**** Status of stage "<< stageID << " (Theard " << std::this_thread::get_id() <<") "<<std::endl;
+        -:  106:        } else {
+    #####:  107:            std::cout<<"**** Failed to Notify The Stage "<< stageID << " (Thread " << std::this_thread::get_id() <<" Due: ****"<<std::endl;
+        -:  108:        }
+       12:  109:        int queueSize = taskQueue->size();
+       12:  110:        std::cout<<"1. Number of Tasks in Queue: "<<queueSize<<std::endl;
+      12*:  111:        std::string message = this->working ? "True" : "False";
+       12:  112:        std::cout<<"2. Working: "<<message<<std::endl;
+      12*:  113:        message = this->prevStageStatus ? "True" : "False";
+       12:  114:        std::cout<<"3. Prev Stage Completed: "<<message<<std::endl;
+       12:  115:    }else{
+       17:  116:        this->working = true;
+       17:  117:        std::cout<<"Notify Stage " << stageID <<std::endl;
+       17:  118:        this->activeTask_condition.notify_all(); // Notify all the threads waiting on the condition variable to start working
+       17:  119:        sleep(0.5);  // Sleep for 0.5 seconds to allow the thread to start working
+        -:  120:    }
+       29:  121:}
+        -:  122:
+      113:  123:bool ActiveObjectDP::isActive() {
+      113:  124:    return this->working;
+        -:  125:}
+        -:  126:
+        -:  127:// Make the pipe wait for the stage
+       14:  128:void ActiveObjectDP::makePipeWait(std::mutex &pipeMtx, PipeDP *pipe) {
+       14:  129:    if (this->working) { // Check if the stage is working
+        -:  130:
+       14:  131:    std::unique_lock<std::mutex> lock_pipe(pipeMtx); // Lock the pipe mutex
+       14:  132:    std::cout<<"Stage is Working"<<std::endl;
+       14:  133:    pipe->setStageActiveStatus(true);  // Set the stage active status to true
+        -:  134:
+       42:  135:    activeTask_condition.wait(lock_pipe, [this] { return !this->isActive(); }); // Wait until the stage is not active
+       14:  136:    pipe->setStageActiveStatus(false); // Set the stage active status to false
+        -:  137:
+       14:  138:    std::cout<<"Stage Finished its work"<<std::endl;
+       14:  139:    } else { // If the stage is not working
+    #####:  140:        pipe->setStageActiveStatus(false); // Set the stage active status to false
+    #####:  141:        std::cout<<"Stage is not working"<<std::endl;
+        -:  142:    }
+       14:  143:}

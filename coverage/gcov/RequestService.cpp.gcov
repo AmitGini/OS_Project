@@ -1,0 +1,261 @@
+        -:    0:Source:RequestService.cpp
+        -:    0:Graph:./RequestService.gcno
+        -:    0:Data:./RequestService.gcda
+        -:    0:Runs:5
+        -:    1:#include "RequestService.hpp"
+        -:    2:
+        -:    3:
+        -:    4:// Send a message to the client
+      181:    5:void RequestService::sendMessage(int &client_FD, const std::string& message) {
+      181:    6:    if(client_FD < 0) {
+    #####:    7:        std::perror("Error: Invalid client file descriptor.");
+    #####:    8:        return;
+        -:    9:    }
+      181:   10:    send(client_FD, message.c_str(), message.size(), 0);
+        -:   11:}
+        -:   12:
+        -:   13:// Start the conversation with the client
+       79:   14:int RequestService::startConversation(int &client_FD){
+       79:   15:    if(client_FD < 0) {
+    #####:   16:        std::perror("Error: Invalid client file descriptor.");
+    #####:   17:        return -1;
+        -:   18:    }
+        -:   19:    std::string menu =
+        -:   20:        "\nMenu:\n"
+        -:   21:        "0. Execute Tasks      (LF ONLY!)\n"
+        -:   22:        "1. Create a New Graph\n"
+        -:   23:        "2. Add Edge\n"
+        -:   24:        "3. Remove Edge\n"
+        -:   25:        "4. Compute MST\n"
+        -:   26:        "5. Get MST Weighted Longest Path \n"
+        -:   27:        "6. Get MST Weighted Shortest Path\n"
+        -:   28:        "7. Get MST Average Weight of Edge\n"
+        -:   29:        "8. Get MST Total Weight of Edges \n"
+        -:   30:        "9. Print MST\n"
+        -:   31:        "10. Exit\n"
+      158:   32:        "\nChoice: ";
+        -:   33:    
+        -:   34:    while (true) {
+       80:   35:        sendMessage(client_FD, menu); // Send the menu to the client
+       80:   36:        memset(buffer, 0, sizeof(buffer));  // Clear the buffer
+       80:   37:        read(client_FD, buffer, sizeof(buffer));  // Read the client's choice
+       80:   38:        int choice = 0;
+        -:   39:        try{
+       82:   40:            choice = std::stoi(buffer);
+       79:   41:            if(choice < 0 || choice > 10){
+    #####:   42:                throw std::invalid_argument("Invalid choice");
+        -:   43:            }
+        1:   44:        }catch(std::invalid_argument& e){
+        1:   45:            sendMessage(client_FD, "Invalid choice. Please try again.\n");
+        1:   46:            continue;
+        1:   47:        }
+       79:   48:        memset(buffer, 0, sizeof(buffer));
+       79:   49:        return choice;
+        1:   50:    }
+       79:   51:}
+        -:   52:
+        -:   53:// Create a new graph conversation
+        4:   54:bool RequestService::createGraph(int &client_FD){
+        4:   55:    if(client_FD < 0) {
+    #####:   56:        std::perror("Error: Invalid client file descriptor.");
+    #####:   57:        return false;
+        -:   58:    }
+        4:   59:    std::lock_guard<std::mutex> lock(graphMutex);
+        4:   60:    std::string message = "Enter the number of vertices: ";
+        4:   61:    sendMessage(client_FD, message);
+        -:   62:
+        4:   63:    int numVertices = 0;
+        4:   64:    memset(buffer, 0, sizeof(buffer));
+        4:   65:    read(client_FD, buffer, sizeof(buffer)); // Read number of vertices from client
+        -:   66:    try{
+        8:   67:        numVertices = std::stoi(buffer);
+        2:   68:        memset(buffer, 0, sizeof(buffer));
+        2:   69:        if(numVertices <= 0){  
+    #####:   70:            throw std::invalid_argument("Invalid number of vertices");
+        -:   71:        }
+        -:   72:
+        2:   73:        graph = std::make_unique<Graph>(numVertices);  // Create a new graph
+        -:   74:        
+        -:   75:        // Send acknowledgment to client
+        2:   76:        message = "Graph created with " + std::to_string(numVertices) + " vertices.\n";
+        2:   77:        sendMessage(client_FD, message);
+        2:   78:        return true;
+        -:   79:    
+        2:   80:    }catch(std::invalid_argument& e){
+        2:   81:        message = "Invalid number of vertices, Exiting Graph Creation.\n";
+        2:   82:        sendMessage(client_FD, message);
+        2:   83:        memset(buffer, 0, sizeof(buffer));
+        2:   84:        return false;
+        2:   85:    }
+        4:   86:}
+        -:   87:
+        -:   88:// Add edge to the graph conversation
+       14:   89:bool RequestService::modifyGraph(int &client_FD, bool toAddEdge) {
+       14:   90:    if(client_FD < 0) {
+    #####:   91:        std::perror("Error: Invalid client file descriptor.");
+    #####:   92:        return false;
+        -:   93:    }
+        -:   94:
+       14:   95:    std::lock_guard<std::mutex> lock(graphMutex);
+       14:   96:    if(this->graph == nullptr){
+    #####:   97:        std::string message = "Graph is not created. Please create a graph first.\n";
+    #####:   98:        sendMessage(client_FD, message);
+    #####:   99:        return false;
+    #####:  100:    }
+        -:  101:
+       14:  102:    int graphSize = graph->getSizeVertices();
+       14:  103:    memset(buffer, 0, sizeof(buffer));
+       14:  104:    std::string message;
+        -:  105:
+       14:  106:    if(toAddEdge){        
+        9:  107:        int u = 0, v = 0, weight = 0;
+        9:  108:        message = "Enter the source vertex, destination vertex, and edge weight separated by spaces: ";
+        9:  109:        sendMessage(client_FD, message);
+        9:  110:        read(client_FD, buffer, sizeof(buffer));  // Read edge information from client
+        -:  111:        
+        9:  112:        if (sscanf(buffer, "%d %d %d", &u, &v, &weight) != 3 || u < 0 || v < 0 || weight < 0 || u >= graphSize || v >= graphSize) {
+        4:  113:            message = "Invalid input. Please enter three integers separated by spaces.\n";
+        4:  114:            sendMessage(client_FD, message);
+        4:  115:            memset(buffer, 0, sizeof(buffer));
+        4:  116:            return false;
+        -:  117:        }
+        -:  118:        
+        5:  119:        graph->addEdge(u, v, weight); // Add edge from graph
+        5:  120:        message = "Edge added between " + std::to_string(u) + " and " + std::to_string(v) + " with weight " + std::to_string(weight) + ".\n";
+        5:  121:        sendMessage(client_FD, message); // Send acknowledgment to client
+        -:  122:    }else{
+        5:  123:        message = "Enter the source vertex, destination vertex, separated by spaces: ";
+        5:  124:        sendMessage(client_FD, message);
+        5:  125:        read(client_FD, buffer, sizeof(buffer)); // Read edge information from client
+        -:  126:        
+        5:  127:        int u = 0, v = 0;
+        5:  128:        if (sscanf(buffer, "%d %d", &u, &v) != 2 || u < 0 || v < 0 || u >= graphSize || v >= graphSize) {
+        2:  129:            message = "Invalid input. Please enter two integers separated by spaces.\n";
+        2:  130:            sendMessage(client_FD, message);
+        2:  131:            memset(buffer, 0, sizeof(buffer));
+        2:  132:            return false;
+        -:  133:        }
+        -:  134:
+        3:  135:        graph->removeEdge(u, v); // Remove edge from graph
+        3:  136:        message = "Edge removed between " + std::to_string(u) + " and " + std::to_string(v) + ".\n";
+        3:  137:        sendMessage(client_FD, message);  // Send acknowledgment to client
+        -:  138:    }
+        8:  139:    memset(buffer, 0, sizeof(buffer));
+        8:  140:    return true;
+       14:  141:}
+        -:  142:
+        -:  143:// Calculate MST conversation
+       12:  144:bool RequestService::calculateMST(int &client_FD) {
+       12:  145:    if(client_FD < 0) {
+    #####:  146:        std::perror("Error: Invalid client file descriptor.");
+    #####:  147:        return false;
+        -:  148:    }
+        -:  149:
+       12:  150:    std::lock_guard<std::mutex> lock(graphMutex);
+       12:  151:    if (this->graph == nullptr) {
+    #####:  152:        std::string message = "Graph is not created. Please create a graph first.\n";
+    #####:  153:        sendMessage(client_FD, message);
+    #####:  154:        return false;
+    #####:  155:    }
+        -:  156:    
+       12:  157:    std::string message = "Choose MST algorithm:\n1. Prim's Algorithm\n2. Kruskal's Algorithm\n";
+       12:  158:    sendMessage(client_FD, message);
+       12:  159:    memset(buffer, 0, sizeof(buffer));
+       12:  160:    read(client_FD, buffer, sizeof(buffer)); // Read the client's choice
+        -:  161:    
+       12:  162:    int choice = 0;
+        -:  163:    try {
+       16:  164:        choice = std::stoi(buffer);
+       10:  165:        memset(buffer, 0, sizeof(buffer));
+        -:  166:
+       10:  167:        if (choice < 1 || choice > 2) {
+    #####:  168:            throw std::invalid_argument("Invalid choice");
+        -:  169:        }
+        2:  170:    } catch (std::invalid_argument& e) {
+        2:  171:        sendMessage(client_FD, "Invalid choice. Please try again.\n");
+        2:  172:        memset(buffer, 0, sizeof(buffer));
+        2:  173:        return false;
+        2:  174:    }
+        -:  175:    
+       10:  176:    std::unique_ptr<MSTStrategy> strategy = nullptr;
+       10:  177:    if (choice == 1) {
+        5:  178:        strategy = MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Prim);
+        5:  179:    } else if (choice == 2) {
+        5:  180:        strategy = MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Kruskal);
+        -:  181:    }
+        -:  182:    
+       10:  183:    if (strategy) {
+       10:  184:        std::unique_ptr<std::vector<std::vector<int>>> mst = strategy->computeMST(*graph);
+       10:  185:        if(mst){
+       10:  186:            graph->setMST(std::move(mst));
+       10:  187:            message = "MST computed using " + std::string(choice == 1 ? "Prim's" : "Kruskal's") + " Algorithm.\n";
+       10:  188:            sendMessage(client_FD, message);
+        -:  189:        } else {
+    #####:  190:            return false;
+        -:  191:        }
+       10:  192:    }
+       10:  193:    return true;
+       12:  194:}
+        -:  195:
+        -:  196:// Get MST data based on choice
+       33:  197:bool RequestService::getMSTData(int &client_FD, int choice) {
+       33:  198:    if(client_FD < 0) {
+    #####:  199:        std::perror("Error: Invalid client file descriptor.");
+    #####:  200:        return false;
+        -:  201:    }
+        -:  202:
+       33:  203:    std::lock_guard<std::mutex> lock(graphMutex);
+       33:  204:    if(this->graph == nullptr){
+    #####:  205:        std::string message = "Graph is not created. Please create a graph first.\n";
+    #####:  206:        sendMessage(client_FD, message);
+    #####:  207:        return false;
+      33*:  208:    }else if(!this->graph->hasMST()){
+        1:  209:        std::string message = "MST is not computed. Please compute MST first.\n";
+        1:  210:        sendMessage(client_FD, message);
+        1:  211:        return false;
+        1:  212:    }
+        -:  213:
+       32:  214:    std::string message;
+       32:  215:    double data = -1;
+       32:  216:    std::string mst_data = "";
+       32:  217:    switch (choice) {
+        6:  218:        case 5:   // Get the weight of the longest path in MST
+        6:  219:            data = static_cast<int>(graph->getMSTLongestDistance());
+        6:  220:            message = "Weight of the longest path in MST: " + std::to_string(data) + "\n";
+        6:  221:            break;
+        -:  222:        
+        6:  223:        case 6:  // Get the weight of the shortest path in MST
+        6:  224:            data = static_cast<int>(graph->getMSTShortestDistance());
+        6:  225:            message = "Weight of the shortest path in MST: " + std::to_string(data) + "\n";
+        6:  226:            break;
+        -:  227:        
+        7:  228:        case 7:  // Get the average weight of the edges in MST
+        7:  229:            data = graph->getMSTAvgEdgeWeight();
+        7:  230:            message = "Average weight of the edges in MST: " + std::to_string(data) + "\n";
+        7:  231:            break;
+        -:  232:        
+        6:  233:        case 8:  // Total Weight of the MST
+        6:  234:            data = static_cast<int>(graph->getMSTTotalWeight());
+        6:  235:            message = "Total weight of the MST: " + std::to_string(data) + "\n";
+        6:  236:            break;
+        -:  237:        
+        7:  238:        case 9: // Print MST
+        7:  239:            mst_data = graph->printMST();
+        7:  240:            message = "MST:\n" + mst_data + "\n";
+        7:  241:            break;
+        -:  242:        
+    #####:  243:        default: // Invalid choice
+    #####:  244:            return false;
+        -:  245:    }
+       32:  246:    sendMessage(client_FD, message);
+       32:  247:    return true;
+       33:  248:}
+        -:  249:
+        2:  250:bool RequestService::stopClient(int &client_FD) {
+        2:  251:    if (client_FD < 0) {
+    #####:  252:        std::perror("Error: Invalid client file descriptor.");
+    #####:  253:        return false;
+        -:  254:    }
+        2:  255:    std::cout << "Client Connection Closed" << std::endl;
+        2:  256:    return true;
+        -:  257:}

@@ -1,0 +1,44 @@
+        -:    0:Source:main.cpp
+        -:    0:Graph:./main.gcno
+        -:    0:Data:./main.gcda
+        -:    0:Runs:5
+        -:    1:#include <iostream>
+        -:    2:#include <unistd.h>
+        -:    3:#include "Graph.hpp"
+        -:    4:#include "MSTFactory.hpp"
+        -:    5:#include "MSTStrategy.hpp"
+        -:    6:#include "PrimStrategy.hpp"
+        -:    7:#include "KruskalStrategy.hpp"
+        -:    8:#include "Server.hpp"
+        -:    9:
+        5:   10:int main(int argc, char* argv[]) {
+        5:   11:    bool pipelineFlag = false, leaderFollowerFlag = false;
+        -:   12:
+        -:   13:    // Parsing command-line arguments
+        5:   14:    int opt = 0;
+        9:   15:    while ((opt = getopt(argc, argv, "pl")) != -1) {
+        5:   16:        switch (opt) {
+        2:   17:            case 'p':
+        2:   18:                pipelineFlag = true;
+        2:   19:                break;
+        2:   20:            case 'l':
+        2:   21:                leaderFollowerFlag = true;
+        2:   22:                break;
+        1:   23:            default:
+        1:   24:                std::cerr << "Usage: ./" << argv[0] << " [-p] [-l]" << std::endl
+        1:   25:                          << "Example: " << argv[0] << " -p (for Pipeline)" << std::endl
+        1:   26:                          << "         " << argv[0] << " -l (for LeaderFollower)" << std::endl;
+        1:   27:                exit(EXIT_FAILURE);
+        -:   28:        }
+        -:   29:    }
+        -:   30:
+        4:   31:    if((!pipelineFlag && !leaderFollowerFlag) || (pipelineFlag && leaderFollowerFlag)) {
+        2:   32:        std::cerr << "Must choose 1 type of design pattern (-p:Pipeline -l:LeaderFollower)" << std::endl;
+        2:   33:        exit(EXIT_FAILURE);
+        -:   34:    }
+        -:   35:    
+        2:   36:    Server* serverObj = pipelineFlag ? new Server(true) : new Server(false);
+        2:   37:    delete serverObj;
+        -:   38:
+        2:   39:    return 0;
+        -:   40:}

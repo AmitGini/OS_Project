@@ -1,0 +1,66 @@
+        -:    0:Source:KruskalStrategy.cpp
+        -:    0:Graph:./KruskalStrategy.gcno
+        -:    0:Data:./KruskalStrategy.gcda
+        -:    0:Runs:5
+        -:    1:#include "KruskalStrategy.hpp"
+        -:    2:
+        -:    3:// Helper function to perform DFS to check for cycles
+        6:    4:bool KruskalStrategy::hasCycle(int current, int parent, const std::vector<std::vector<int>>& adj, std::vector<bool>& visited) {
+        6:    5:    visited[current] = true;
+        6:    6:    int numVer = adj.size(); // Number of vertices in the graph
+       36:    7:    for (int neighbor = 0; neighbor < numVer; ++neighbor) {
+       30:    8:        if (adj[current][neighbor] != 0) {
+        6:    9:            if (!visited[neighbor]) {
+       3*:   10:                if (hasCycle(neighbor, current, adj, visited)) return true;
+        3:   11:            } else if (neighbor != parent) {
+    #####:   12:                return true;
+        -:   13:            }
+        -:   14:        }
+        -:   15:    }
+        6:   16:    return false;
+        -:   17:}
+        -:   18:
+        5:   19:std::unique_ptr<std::vector<std::vector<int>>> KruskalStrategy::computeMST(const Graph& graph) {
+        5:   20:    int numVertices = graph.getSizeVertices();
+        5:   21:    const auto& adjMatrix = graph.getGraph();
+        5:   22:    std::vector<std::tuple<int, int, int>> edges; // (weight, src, dest) To keep track of included edges for sorting and processing
+        -:   23:
+        -:   24:    // Collect all edges from the adjacency matrix
+       30:   25:    for (int i = 0; i < numVertices; i++) {
+       75:   26:        for (int j = i + 1; j < numVertices; j++) {
+       50:   27:            if (adjMatrix[i][j] > 0) {
+        3:   28:                edges.emplace_back(adjMatrix[i][j], i, j);
+        -:   29:            }
+        -:   30:        }
+        -:   31:    }
+        -:   32:
+        -:   33:    auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
+       10:   34:        numVertices, std::vector<int>(numVertices, 0));
+        -:   35:    
+        5:   36:    std::sort(edges.begin(), edges.end());  // Sort edges by their weights
+        5:   37:    int edgesAdded = 0;
+        -:   38:
+        -:   39:    // Kruskal's algorithm - Adding edges to the MST, checking for cycles
+        8:   40:    for (const auto& eg : edges) {
+        3:   41:        int weight = std::get<0>(eg);
+        3:   42:        int u = std::get<1>(eg);
+        3:   43:        int v = std::get<2>(eg);
+        3:   44:        (*mstMatrix)[v][u] = weight;
+        3:   45:        (*mstMatrix)[u][v] = weight;
+        -:   46:        
+        -:   47:        // Check for a cycle using DFS
+        3:   48:        std::vector<bool> visited(numVertices, false);
+        3:   49:        if (hasCycle(u, -1, *mstMatrix, visited)) {
+        -:   50:            // If adding this edge creates a cycle, remove it
+    #####:   51:            (*mstMatrix)[u][v] = 0;
+    #####:   52:            (*mstMatrix)[v][u] = 0;
+        -:   53:        } else {
+        -:   54:            // If no cycle is formed, continue
+        3:   55:            edgesAdded++;
+       3*:   56:            if (edgesAdded == numVertices - 1) break; // Stop when enough edges have been added
+        -:   57:        }
+        3:   58:    }
+        -:   59:    // Reference of the MST adjacency matrix 
+       10:   60:    return mstMatrix;
+        5:   61:}
+        -:   62:

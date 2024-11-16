@@ -108,26 +108,30 @@ helgrind_lf: client_lf_script.sh graph
 coverage: CXXFLAGS += $(COVFLAGS)  # Add coverage flags
 coverage: graph # compile graph with coverage flags
 # Create coverage directory
-	mkdir -p coverage  
-# Run the program
+	mkdir -p coverage
+# Run the program with test cases
 	-./graph -p -l
 	-./graph -k
 	-./graph asfasf 12312
 	./graph -p
 	./graph -l
-# Generate coverage data
-	gcov main.cpp -o .
-	gcov Graph.cpp -o .
-	gcov KruskalStrategy.cpp -o .
-	gcov PrimStrategy.cpp -o .
-	gcov Server.cpp -o .
-	gcov RequestService.cpp -o .
-	gcov PipeDP.cpp -o .
-	gcov ActiveObjectDP.cpp -o .
-	gcov TaskQueue.cpp -o .
-	gcov LeaderFollowerDP.cpp -o .
+# Generate coverage data in coverage directory
+	mkdir -p coverage/gcov
+	gcov -o . main.cpp > coverage/gcov/main.cpp.gcov
+	gcov -o . Graph.cpp > coverage/gcov/Graph.cpp.gcov
+	gcov -o . KruskalStrategy.cpp > coverage/gcov/KruskalStrategy.cpp.gcov
+	gcov -o . PrimStrategy.cpp > coverage/gcov/PrimStrategy.cpp.gcov
+	gcov -o . Server.cpp > coverage/gcov/Server.cpp.gcov
+	gcov -o . RequestService.cpp > coverage/gcov/RequestService.cpp.gcov
+	gcov -o . PipeDP.cpp > coverage/gcov/PipeDP.cpp.gcov
+	gcov -o . ActiveObjectDP.cpp > coverage/gcov/ActiveObjectDP.cpp.gcov
+	gcov -o . TaskQueue.cpp > coverage/gcov/TaskQueue.cpp.gcov
+	gcov -o . LeaderFollowerDP.cpp > coverage/gcov/LeaderFollowerDP.cpp.gcov
+	mv *.gcov coverage/gcov/
+	mv *.gcda coverage/
+	mv *.gcno coverage/
 # Generate HTML report
-	lcov --capture --directory . --output-file coverage/coverage.info
+	lcov --capture --directory coverage --output-file coverage/coverage.info
 	lcov --remove coverage/coverage.info '/usr/*' --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
 
@@ -165,7 +169,7 @@ TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
 # Clean up
 clean:
 	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info
-	rm -rf profile_data callgraph_data html out coverage
+	rm -rf profile_data callgraph_data html out
 
 # Declare phony targets
 .PHONY: all clean

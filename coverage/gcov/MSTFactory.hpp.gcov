@@ -1,0 +1,33 @@
+        -:    0:Source:MSTFactory.hpp
+        -:    0:Graph:./RequestService.gcno
+        -:    0:Data:./RequestService.gcda
+        -:    0:Runs:5
+        -:    1:#ifndef MST_FACTORY_HPP
+        -:    2:#define MST_FACTORY_HPP
+        -:    3:
+        -:    4:#include "MSTStrategy.hpp"
+        -:    5:#include "KruskalStrategy.hpp"
+        -:    6:#include "PrimStrategy.hpp"
+        -:    7:#include <memory>
+        -:    8:
+        -:    9:class MSTFactory{
+        -:   10:public:
+        -:   11:    enum AlgorithmType
+        -:   12:    {
+        -:   13:        Prim,
+        -:   14:        Kruskal
+        -:   15:    };
+        -:   16:
+       10:   17:    static std::unique_ptr<MSTStrategy> createMSTStrategy(AlgorithmType type) {
+       10:   18:        switch (type) {
+        5:   19:            case AlgorithmType::Kruskal:
+        5:   20:                return std::make_unique<KruskalStrategy>();
+        5:   21:            case AlgorithmType::Prim:
+        5:   22:                return std::make_unique<PrimStrategy>();
+    #####:   23:            default:
+    #####:   24:                throw std::invalid_argument("Unknown MST Algorithm Type");
+        -:   25:        }
+        -:   26:    }
+        -:   27:};
+        -:   28:
+        -:   29:#endif 
