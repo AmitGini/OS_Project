@@ -3,6 +3,7 @@
 # Compiler settings
 CXX = g++
 CXXFLAGS = -g -std=c++17
+COVFLAGS = -fprofile-arcs -ftest-coverage
 OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o TaskQueue.o
 
 # Default target
@@ -11,7 +12,6 @@ all: graph
 # Rule to link the program
 graph: $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
 
 # Generate callgraph for Pipe Active Object
 callgraph_pipe: client_script.sh graph
@@ -46,48 +46,6 @@ callgraph_lf: client_lf_script.sh graph
 	echo "Using $$callgrind_file for callgraph" && \
 	callgrind_annotate $$callgrind_file > callgraph_report_LF.txt && \
 	mv $$callgrind_file callgraph_data_LF.txt
-
-coverage: CXXFLAGS += --coverage -fprofile-arcs -ftest-coverage
-coverage: graph
-# Create the coverage directory
-	mkdir -p coverage
-# Run Invalid input tests
-	-./graph -p -l
-	-./graph -k
-	-./graph asfasf 12312
-	-./graph
-
-# Test Pipe Active Object implementation
-	chmod +x client_script.sh
-	./graph -p & echo $$! > server_pid.txt
-	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-	./client_script.sh || true
-	kill $$(cat server_pid.txt) || true
-	sleep 2
-
-# Test Leader Follower implementation
-	chmod +x client_lf_script.sh
-	./graph -l & echo $$! > server_pid.txt
-	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-	./client_lf_script.sh || true
-	kill $$(cat server_pid.txt) || true
-	sleep 2
-
-# Generate coverage data
-	gcov main.cpp -o .
-	gcov Graph.cpp -o .
-	gcov KruskalStrategy.cpp -o .
-	gcov PrimStrategy.cpp -o .
-	gcov Server.cpp -o .
-	gcov RequestService.cpp -o .
-	gcov PipeDP.cpp -o .
-	gcov ActiveObjectDP.cpp -o .
-	gcov TaskQueue.cpp -o .
-	gcov LeaderFollowerDP.cpp -o .
-
-# Generate coverage report
-	lcov --capture --directory . --output-file coverage/coverage.info
-	genhtml coverage/coverage.info --output-directory coverage/html
 
 # Run Memcheck for Pipe Active Object
 memcheck_pipe: client_script.sh graph
@@ -145,6 +103,34 @@ helgrind_lf: client_lf_script.sh graph
 	valgrind --tool=helgrind --log-file=helgrind_lf.log ./graph -l
 	@echo "Helgrind analysis for LeaderFollower saved to helgrind_lf.log"
 
+# Target to compile with coverage flags
+
+coverage: CXXFLAGS += $(COVFLAGS)  # Add coverage flags
+coverage: graph # compile graph with coverage flags
+# Create coverage directory
+	mkdir -p coverage  
+# Run the program
+	-./graph -p -l
+	-./graph -k
+	-./graph asfasf 12312
+	./graph -p
+	./graph -l
+# Generate coverage data
+	gcov main.cpp -o .
+	gcov Graph.cpp -o .
+	gcov KruskalStrategy.cpp -o .
+	gcov PrimStrategy.cpp -o .
+	gcov Server.cpp -o .
+	gcov RequestService.cpp -o .
+	gcov PipeDP.cpp -o .
+	gcov ActiveObjectDP.cpp -o .
+	gcov TaskQueue.cpp -o .
+	gcov LeaderFollowerDP.cpp -o .
+# Generate HTML report
+	lcov --capture --directory . --output-file coverage/coverage.info
+	lcov --remove coverage/coverage.info '/usr/*' --output-file coverage/coverage.info
+	genhtml coverage/coverage.info --output-directory coverage/html
+
 # Rule to compile the source files
 main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipeDP.hpp LeaderFollowerDP.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -179,9 +165,7 @@ TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
 # Clean up
 clean:
 	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info
-	rm -rf coverage profile_data callgraph_data out
-	-fuser -k 4040/tcp
-	-sudo sysctl -w net.ipv4.tcp_tw_reuse=1
+	rm -rf profile_data callgraph_data html out coverage
 
 # Declare phony targets
 .PHONY: all clean

@@ -13,9 +13,7 @@ Server::Server(bool isPipe) {
         this->patternType = std::make_unique<LeaderFollowerDP>();
     }
 
-     // Start the stop thread - to listen for stop command input from keyboard
-    auto stop_thread = std::make_shared<std::thread>(&Server::stop, this);  
-    stop_thread->detach();  // Detach the thread
+
 
     start();  // Start the server
 }
@@ -23,18 +21,9 @@ Server::Server(bool isPipe) {
 // Destructor
 Server::~Server(){    
     std::cout << "\n********* Stopping Server *********" << std::endl;
-    std::cout<<"Closing Client Sockets && Join Threads..."<<std::endl;
-    for(auto& client_data : clients_dataset){
-        if (client_data.first > 0) {
-            close(client_data.first);
-        }
-        
-        if(client_data.second && client_data.second->joinable()){
-            client_data.second->join();
-        }
-    }
 
     clients_dataset.clear();
+    patternType.reset();
 
     std::cout<<"Closing Server File Descriptor..."<<std::endl;
     if (server_fd >= 0) {
@@ -82,63 +71,57 @@ void Server::start() {
     this->handleConnections();
 }
 
-void Server::stop(){
-    std::string command;
-    while(true){
-        std::cin >> command;
-        if (command == "stop") {
-            this->stopServer = true;
-            break;
-        }
-    }
-}
-
-void Server::handleConnections(){
+void Server::handleConnections() {
     int addrlen = sizeof(this->address);
     fd_set readfds;
     struct timeval timeout;
+    int stdin_fd = fileno(stdin);
+    int max_fd = std::max(server_fd, stdin_fd);
     
     while(!stopServer) {
-        int new_socket = -1;
         FD_ZERO(&readfds);
         FD_SET(server_fd, &readfds);
+        FD_SET(stdin_fd, &readfds);
 
         // Set timeout to 1 second
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
 
-        int activity = select(server_fd + 1, &readfds, NULL, NULL, &timeout);
+        int activity = select(max_fd + 1, &readfds, NULL, NULL, &timeout);
 
         if(activity < 0 && errno != EINTR) {
             perror("select error");
-        }
-
-        if(activity == 0) {
-            // Timeout occurred, check if we should stop
-            if (stopServer) break;
             continue;
         }
 
-        if(FD_ISSET(server_fd, &readfds)) {
-            new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
-            if (new_socket < 0) {
-                perror("accept failed");
-                if(stopServer) break;
-                continue;
+        // Check for keyboard input
+        if(FD_ISSET(stdin_fd, &readfds)) {
+            std::string command;
+            std::getline(std::cin, command);
+            if(command == "stop") {
+                std::cout << "Command: " << command << std::endl;
+                stopServer = true;
+                break;
             }
         }
 
-        if(new_socket >= 0) {
+        // Check for new connections
+        if(FD_ISSET(server_fd, &readfds)) {
+            int new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+            if (new_socket < 0) {
+                perror("accept failed");
+                continue;
+            }
+            
             std::lock_guard<std::mutex> lock(clients_mutex);
             std::cout << "New client connected!" << std::endl;
             auto client_thread = std::make_shared<std::thread>(
-                                    &Server::acceptClientAccess, this, new_socket);
+                &Server::acceptClientAccess, this, new_socket);
             clients_dataset.emplace_back(new_socket, std::move(client_thread));
             std::cout << "Client has Added to the Clients list!" << std::endl;
         }
     }
 }
-
 void Server::acceptClientAccess(int client_socket){
     if(client_socket < 0) return;
     try {
