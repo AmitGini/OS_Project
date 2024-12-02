@@ -53,7 +53,7 @@ void LeaderFollowerDP::work()
 {
     while (!stop)
     {
-        if (this->leaderIndex != CONVERSATION)
+        if (iAmNotLeader())
         { // Check if the leader index is not the conversation leader
             std::unique_lock<std::mutex> lock(this->mtx_lf);
             std::cout << "** Conversation Follower ** - Waiting For Promotion" << std::endl;
@@ -100,6 +100,10 @@ void LeaderFollowerDP::work()
     }
 }
 
+bool LeaderFollower::amIALeader()
+{
+    return this->leaderIndex != CONVERSATION;
+}
 // Execute the tasks
 void LeaderFollowerDP::tasksExecution()
 {

@@ -25,6 +25,7 @@ private:
     void work();            // Enqueues tasks
     void tasksExecution();  // Executes tasks
     void promoteFollower(); // Promotes a follower to leader
+    bool amIALeader();    // Check if the thread is the leader
 
 public:
     LeaderFollowerDP();
