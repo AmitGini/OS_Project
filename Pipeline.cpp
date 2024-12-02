@@ -17,6 +17,8 @@ Pipeline::Pipeline()
 
 Pipeline::~Pipeline()
 {
+    std::cout << "\n********* START Pipeline Stop Process *********" << std::endl;
+
     // Lock the mutex to ensure thread safety
     std::lock_guard<std::mutex> lock(pipeMtx);
     for (auto stage : stages)
@@ -26,6 +28,19 @@ Pipeline::~Pipeline()
 
     // Clear the stages vector to release the shared_ptr resources
     stages.clear();
+    std::cout << "\nPipeline: Cleared Active-Object Stages " << std::endl;
+    std::cout << "\n********* FINISH Pipeline Stop Process *********" << std::endl;
+}
+
+// Process the graphs that sended from the server
+void Pipeline::processGraphs(std::vector<std::weak_ptr<Graph>> &graphs)
+{
+    // Lock the mutex to ensure thread safety
+    std::lock_guard<std::mutex> lock(this->pipeMtx);
+    for (auto graph : graphs)
+    {
+        stages[STAGE_0_START_MST_CALCULATION]->enqueueTask(graph); // enqueue the weak ptr although we have used shared ptr for validation
+    }
 }
 
 void Pipeline::createAOStages()
@@ -86,6 +101,7 @@ void Pipeline::setTaskHandler()
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
             } });
+
         stages[STAGE_1_TOTAL_WEIGHT_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                          {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
@@ -97,6 +113,7 @@ void Pipeline::setTaskHandler()
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
             } });
+
         stages[STAGE_2_LON_DIS_BET_TWO_VER_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                                 {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
@@ -108,6 +125,7 @@ void Pipeline::setTaskHandler()
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
             } });
+
         stages[STAGE_3_SHO_DIS_BET_TWO_VER_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                                 {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
@@ -119,6 +137,7 @@ void Pipeline::setTaskHandler()
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
             } });
+
         stages[STAGE_4_AVG_DIS_BET_TWO_EDG_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                                 {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
@@ -130,6 +149,7 @@ void Pipeline::setTaskHandler()
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
             } });
+
         stages[STAGE_5_FINISH_MST_CALCUATION]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                               {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
@@ -149,18 +169,3 @@ void Pipeline::setTaskHandler()
     }
 }
 
-void Pipeline::processGraphs(std::vector<std::weak_ptr<Graph>> &graphs)
-{
-    // Lock the mutex to ensure thread safety
-    std::lock_guard<std::mutex> lock(this->pipeMtx);
-    std::shared_ptr<Graph> sharedGraph;
-    for (auto graph : graphs)
-    {
-        sharedGraph = graph.lock(); // to use graph methods we need to lock the weak_ptr to get a shared_ptr
-        // Check if the graph already has calculated the MST data - if not, enqueue it to the first stage
-        if (sharedGraph->getMSTDataStatusCalculation() < STAGE_0_START_MST_CALCULATION)
-        {
-            stages[STAGE_1_TOTAL_WEIGHT_MST]->enqueueTask(graph); // enqueue the weak ptr although we have used shared ptr for validation
-        }
-    }
-}

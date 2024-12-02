@@ -2,6 +2,7 @@
 
 #define PORT 4040
 #define INVALID -1
+#define NO_MST_DATA_CALCULATION -1
 
 // Constructor
 Server::Server()
@@ -17,19 +18,30 @@ Server::Server()
 // Destructor
 Server::~Server()
 {
-    std::cout << "\n********* Starting Stop Process *********" << std::endl;
+    std::cout << "\n********* START Server Stop Process *********" << std::endl;
     delete pipeline;       // Delete the pipeline object
     delete leaderfollower; // Delete the leaderfollower object
 
+    for (auto &client : clients_dataset)
+    {
+        if (client.first >= 0)
+        {
+            close(client.first);
+        }
+        if (client.second->joinable())
+        {
+            client.second->join();
+        }
+    }
     clients_dataset.clear();
-
-    std::cout << "Closing Server File Descriptor..." << std::endl;
+    std::cout << "Server: All clients File Descriptor are CLOSED" << std::endl;
+    std::cout << "Server: All clients Threads are JOINED" << std::endl;
     if (server_fd >= 0)
     {
         close(server_fd);
     }
-
-    std::cout << "********* Server has Closed! *********" << std::endl;
+    std::cout << "Server: Server File Descriptor CLOSE" << std::endl;
+    std::cout << "\n********* FINISH Server Stop Process *********" << std::endl;
 }
 
 // Start the server
@@ -126,81 +138,24 @@ void Server::handleConnections()
                 continue;
             }
 
-            std::lock_guard<std::mutex> lock(clients_mutex); // Lock the mutex because we are modifying the clients vector
+            std::lock_guard<std::mutex> lock(this->mtx); // Lock the mutex because we are modifying the clients vector
             std::cout << "New client connected!" << std::endl;
-            auto client_thread = std::make_shared<std::thread>(
-                &Server::handleRequest, this, new_socket);
-            clients_dataset.emplace_back(new_socket, std::move(client_thread));
+            auto client_thread = std::make_unique<std::thread>(&Server::handleRequest, this, new_socket);
+            clients_dataset.emplace_back(new_socket, std::move(client_thread)); // Add client to the list (unique ptr owner is being moved)
             std::cout << "Client has Added to the Clients list!" << std::endl;
         }
     }
 }
 
-void Server::handleRequest(int client_socket)
+void Server::handleRequest(int client_FD)
 {
-    if (client_socket > 0)
-    {
-        try
-        {
-            while (true)
-            {
-                int choice = startConversation(client_socket);
-
-                switch (choice)
-                {
-                case 0:
-                    stopClient(client_socket);
-                    return;
-
-                case 1:
-                    graphCreation(client_socket);
-                    break;
-
-                case 2:
-                    sendDataToPipeline(client_socket);
-                    break;
-
-                case 3:
-                    sendDataToLeaderFollower(client_socket);
-                    break;
-
-                case 4:
-                    printMSTGraphsData(client_socket);
-                    break;
-
-                default:
-                    sendMessage(client_socket, "Invalid choice. Please try again.\n");
-                    break;
-                }
-            }
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Error handling client: " << e.what() << std::endl;
-        }
-    }
-}
-
-// Send a message to the client
-void Server::sendMessage(int client_FD, const std::string message)
-{
-    if (client_FD < 0)
+    if (client_socket < 0)
     {
         std::perror("Error: Invalid client file descriptor.");
         return;
     }
-    send(client_FD, message.c_str(), message.size(), 0);
-}
 
-// Start the conversation with the client
-int Server::startConversation(int lient_FD)
-{
-    if (client_FD < 0)
-    {
-        std::perror("Error: Invalid client file descriptor.");
-        return -1;
-    }
-
+    char buffer[1024];
     std::string menu =
         "\nMenu:\n"
         "1. Create a New Graph\n"
@@ -212,26 +167,63 @@ int Server::startConversation(int lient_FD)
 
     while (true)
     {
-        sendMessage(client_FD, menu);            // Send the menu to the client
-        memset(buffer, 0, sizeof(buffer));       // Clear the buffer
-        read(client_FD, buffer, sizeof(buffer)); // Read the client's choice
-        int choice = 0;
         try
         {
+            sendMessage(client_FD, menu);            // Send the menu to the client
+            memset(buffer, 0, sizeof(buffer));       // Clear the buffer
+            read(client_FD, buffer, sizeof(buffer)); // Read the client's choice
+        
+            int choice = 0;
             choice = std::stoi(buffer);
             if (choice < 0 || choice > 4)
             {
-                throw std::invalid_argument("Invalid choice");
+                continue;
+            }
+
+            switch (choice)
+            {
+                case 0:
+                    stopClient(client_FD);
+                    return;
+
+                case 1:
+                    graphCreation(client_FD);
+                    break;
+
+                case 2:
+                    sendDataToPipeline(client_FD);
+                    break;
+
+                case 3:
+                    sendDataToLeaderFollower(client_FD);
+                    break;
+
+                case 4:
+                    printMSTGraphsData(client_FD);
+                    break;
+
+                default:
+                    sendMessage(client_FD, "Invalid choice. Please try again.\n");
+                    break;
             }
         }
-        catch (std::invalid_argument &e)
+        catch (const std::exception &e)
         {
-            sendMessage(client_FD, "Invalid choice. Please try again.\n");
             continue;
         }
-        memset(buffer, 0, sizeof(buffer));
-        return choice;
     }
+}
+
+
+// Send a message to the client
+void Server::sendMessage(int client_FD, const std::string message)
+{
+    if (client_FD < 0)
+    {
+        std::perror("Error: Invalid client file descriptor.");
+        return;
+    }
+    send(client_FD, message.c_str(), message.size(), 0);
 }
 
 void Server::graphCreation(int client_FD)
@@ -245,7 +237,7 @@ void Server::graphCreation(int client_FD)
         return;
     }
 
-    auto graph = std::make_unique<Graph>(numVertices);
+    auto graph = std::make_shared<Graph>(numVertices);
 
     sendMessage(client_FD, "Enter the number of edges: ");
     int numEdges = receiveIntFromClient(client_FD);
@@ -253,7 +245,7 @@ void Server::graphCreation(int client_FD)
     if (numEdges < 0)
     {
         sendMessage(client_FD, "Invalid number of edges.\n");
-        graph.release();
+        graph.reset();
         return;
     }
 
@@ -311,91 +303,89 @@ void Server::graphCreation(int client_FD)
 
     if (graph->getValidationMSTExist())
     {
-        std::lock_guard<std::mutex> lock(graphs_mutex);
-        graphsData.push_back(std::move(graph));
+        std::lock_guard<std::mutex> lock(this->mtx);
+        this->vec_SharedPtrGraphs.push_back(graph);
+        this->vec_WeakPtrGraphs_Unprocessed.push_back(graph);
         sendMessage(client_FD, "Graph created and stored.\n");
     }
     else
     {
-        graph.release();
+        graph.reset();
         sendMessage(client_FD, "MST does not exist for the given graph.\n");
     }
 }
 
 void Server::sendDataToPipeline(int client_FD)
 {
-    // For each graph, send it to the Pipeline pattern for processing
-    std::lock_guard<std::mutex> lock(graphs_mutex);
-
-    for (auto &graph : graphsData)
-    {
-        patternType->processGraph(*graph); // Assuming processGraph is defined in RequestService
-    }
-
-    sendMessage(client_FD, "All graphs have been send to Pipeline for process using Active Object.\n");
+    std::lock_guard<std::mutex> lock(this->mtx);
+    if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
+    this->leaderfollower->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
+    sendMessage(client_FD, "All graphs have been sent to Pipeline for processing using Active Object.\n");
 }
 
 void Server::sendDataToLeaderFollower(int client_FD)
 {
-    // For each graph, send it to the Leader-Follower pattern for processing
-    std::lock_guard<std::mutex> lock(graphs_mutex);
+    std::lock_guard<std::mutex> lock(this->mtx);
+    if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
+    this->pipeline->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
+    sendMessage(client_FD, "All graphs have been sent to Leader-Follower for processing.\n");
+}
 
-    for (auto &graph : graphsData)
+void Server::filterUnprocessedGraphs()
+{
+    std::vector<std::weak_ptr<Graph>> tempWeakGraphs;
     {
-        patternType->processGraph(*graph); // Assuming processGraph is defined in RequestService
+        // locking to get shared and access the graph methods and check the status to filter the one that are not yet processed
+        auto weakGraphs = this->vec_WeakPtrGraphs_Unprocessed;
+        for (const auto &unlockedPtrGraph : weakGraphs)
+        {
+            if (auto sharedGraph = unlockedPtrGraph.lock()) // Lock the weak pointer to check validity
+            {
+                if (sharedGraph->getMSTDataStatusCalculation() == NO_MST_DATA_CALCULATION)
+                {
+                    tempWeakGraphs.push_back(weakGraph);  // Add the graph to the temporary vector
+                }
+            }
+        }
     }
-
-    sendMessage(client_FD, "All graphs have been send to Leader-Follower for process.\n");
+    if(this->vec_WeakPtrGraphs_Unprocessed.size() != weakGraph.size()) {
+        this->vec_WeakPtrGraphs_Unprocessed = std::move(weakGraphs);  // prevent copying
+        std::cout << "Unprocessed Graphs are filtered, remain " << weakGraph.size() <<" graphs to process"<< std::endl;
+    }
 }
 
 // Get MST data based on choice
-bool Server::getMSTData(int client_FD)
+bool Server::sendMSTDataToClient(int client_FD)
 {
     if (client_FD < 0)
     {
         std::perror("Error: Invalid client file descriptor.");
-        return false;
+        return;
     }
-
-    std::lock_guard<std::mutex> lock(graphMutex);
-    if (this->graph == nullptr)
+    int counter = 0; // Number of graphs start from 1 (increase in every loop - also the first one)
+    for (auto myGraph : this->vec_SharedPtrGraphs)
     {
-        std::string message = "Graph is not created. Please create a graph first.\n";
+        counter++; // Increase Number of graphs (Starting from 1)
+        std::string message = "********* Graph Number " + std::to_string(counter) + " *********.\n ";
         sendMessage(client_FD, message);
-        return false;
-    }
-    else if (!this->graph->getValidationMSTExist())
-    {
-        std::string message = "MST is not computed. Please compute MST first.\n";
+        if (myGraph == nullptr)
+        {
+            continue;
+        }
+        else if (!myGraph->getValidationMSTExist())
+        {
+            message = "MST is not computed. Please pass it to Pipeline or Leader-Follower.\n";
+            sendMessage(client_FD, message);
+            continue;
+        }
+
+        message = "Weight of the longest path in MST: " + std::to_string(myGraph->getMSTLongestDistance()) + "\n";
+        message += "Weight of the shortest path in MST: " + std::to_string(myGraph->getMSTShortestDistance()) + "\n";
+        message += "Average weight of the edges in MST: " + std::to_string(myGraph->getMSTAvgEdgeWeight()) + "\n";
+        message += "Total weight of the MST: " + std::to_string(myGraph->getMSTTotalWeight()) + "\n";
+        message += "MST Edge Printing (Not Part Of Design Patterns Process):\n" + myGraph->printMST();
         sendMessage(client_FD, message);
-        return false;
     }
-
-    std::string message = "Weight of the longest path in MST: " + graph->getMSTLongestDistance() + "\n";
-    sendMessage(client_FD, message);
-    message = "Weight of the shortest path in MST: " + graph->getMSTShortestDistance() + "\n";
-    sendMessage(client_FD, message);
-
-case 7: // Get the average weight of the edges in MST
-    data = graph->getMSTAvgEdgeWeight();
-    message = "Average weight of the edges in MST: " + std::to_string(data) + "\n";
-    break;
-
-case 8: // Total Weight of the MST
-    data = static_cast<int>(graph->getMSTTotalWeight());
-    message = "Total weight of the MST: " + std::to_string(data) + "\n";
-    break;
-
-case 9: // Print MST
-    mst_data = graph->printMST();
-    message = "MST:\n" + mst_data + "\n";
-    break;
-
-default: // Invalid choice
-    return false;
-}
-sendMessage(client_FD, message);
-return true;
 }
 
 bool Server::stopClient(int &client_FD)

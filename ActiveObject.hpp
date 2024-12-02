@@ -8,7 +8,6 @@
 #include <queue>
 #include <functional>
 #include <utility>
-#include "TaskQueue.hpp"
 #include "Graph.hpp"
 
 class ActiveObject
@@ -25,7 +24,7 @@ private:
     bool working;                                          // Flag to check if the active object is working
 
     void work();        // Work function for the active object
-    void processStop(); // After stop flag detected - initial process to stop the active object before destruction
+    void stopProcess(); // After stop flag detected - initial process to stop the active object before destruction
     void printStatus(); // Print the status of the active object
 
 public:

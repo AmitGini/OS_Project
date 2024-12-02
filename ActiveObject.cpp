@@ -1,5 +1,4 @@
 #include "ActiveObject.hpp"
-#include "Pipeline.hpp"
 
 ActiveObject::ActiveObject(int stage) : stageID(stage), working(false), nextStage(nullptr)
 {
@@ -10,11 +9,15 @@ ActiveObject::ActiveObject(int stage) : stageID(stage), working(false), nextStag
 
 ActiveObject::~ActiveObject()
 {
-    // Join the thread
+    // // Check if the thread is joinable
+    std::cout << "\nActive-Object - Stage " << stageID << " : Destruction Activated" << std::endl;
+
     if (this->activeObjectThread && this->activeObjectThread->joinable())
-    {                                     // Check if the thread is joinable
+    {
+        std::cout << "\nActive-Object - Stage " << stageID << ": Join Thread - Destruction" << std::endl;
         this->activeObjectThread->join(); // Join the thread (wait for the thread to finish)
     }
+    std::cout << "\n********* FINISH Active Object " << stageID << " Stop Process *********" << std::endl;
 }
 
 // Set the next stage
@@ -49,6 +52,7 @@ void ActiveObject::enqueueTask(std::weak_ptr<Graph> graph)
 {
     if (graph.lock() != nullptr)
     {
+        std::lock_guard<
         this->queue_taskData.push(graph);
     }
     else
@@ -87,7 +91,7 @@ void ActiveObject::work()
 
         if (this->stop)
         {
-            processStop();
+            stopProcess();
             return;
         }
         else
@@ -106,22 +110,26 @@ void ActiveObject::work()
 
 void ActiveObject::stopActiveObject()
 {
+    std::cout << "\n********* START Active Object " << stageID << " Stop Process *********" << std::endl;
     this->stop = true;
     if (!this->working)
     {
-        this->cv_AO.notify_one();
+        this->cv_AO.notify_all();
     }
 }
 
-void ActiveObject::processStop()
+void ActiveObject::stopProcess()
 {
+
     {
         std::unique_lock<std::mutex> lock(mtx_AO); // Lock the mutex
+        std::cout << "\nStage " << stageID << " (Active-Object):  Clean tasks queue" << std::endl;
         while (!queue_taskData.empty())
         {
             queue_taskData.front().reset(); // release weak ptr
             queue_taskData.pop();
         }
+        std::cout << "\nStage " << stageID << " (Active-Object):  Release smart pointer - Thread" << std::endl;
         activeObjectThread.reset(); // release unique ptr - before destruction join
     }
 }

@@ -23,7 +23,7 @@ public:
     Pipeline();
     ~Pipeline();
 
-    void processGraphs(std::vector<std::weak_ptr<Graph>>& graphs); // Process the graphs
+    void processGraphs(std::vector<std::weak_ptr<Graph>>& graphs); // Process the graphs that sended from the server
 };
 
 #endif

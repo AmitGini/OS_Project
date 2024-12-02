@@ -12,26 +12,29 @@
 #include <map>
 #include "Graph.hpp"
 
-class LeaderFollowerDP
+class LeaderFollower
 {
 private:
     std::queue<std::weak_ptr<Graph>> queue_taskData;       // Task queue for the active object
-    std::vector<std::unique_ptr<std::thread>> threadsPool; // Thread pool that holds the threads
+    std::queue<std::unique_ptr<std::thread>> threadsPool;  // Queue to manage thread pool and order of promotion to leader
     std::mutex mtx_lf;                                     // Mutex for the threads
     std::condition_variable cv_lf;                         // Condition variable for the threads
+    std::atomic<int> const numThreads{4};                  // Number of threads
     std::atomic<bool> stop{false};                         // Flag to stop the threads
-
+    std::atomic<std::thread::id> currentLeader{};  // Track current leader thread
+    
     // Private methods
     void work();            // Enqueues tasks
-    void tasksExecution();  // Executes tasks
+    void executeTask();     // Executes tasks
     void promoteFollower(); // Promotes a follower to leader
-    bool amIALeader();    // Check if the thread is the leader
 
 public:
-    LeaderFollowerDP();
-    ~LeaderFollowerDP();
+    LeaderFollower();
+    ~LeaderFollower();
 
-    void processGraphs(std::vector<std::weak_ptr<Graph>> &graphs); // Process the graphs
+    void processGraphs(std::vector<std::weak_ptr<Graph>> &graphs); // Process the graphs that sended from the server
+    void setLeader(std::thread::id id); // Set the leader thread
+    bool isLeader(); // Check if the current thread is the leader
 };
 
 #endif
