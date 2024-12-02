@@ -8,10 +8,12 @@
 #include <algorithm>
 #include <memory>
 
-class KruskalStrategy : public MSTStrategy {
+class KruskalStrategy : public MSTStrategy
+{
 public:
-    std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph& graph) override;
+    std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph &graph) override;
+
 private:
-    bool hasCycle(int current, int parent, const std::vector<std::vector<int>>& adj, std::vector<bool>& visited);
+    bool hasCycle(int current, int parent, const std::vector<std::vector<int>> &adj, std::vector<bool> &visited);
 };
 #endif

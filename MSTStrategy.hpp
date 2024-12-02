@@ -5,10 +5,11 @@
 #include <memory>
 #include <vector>
 
-class MSTStrategy {
+class MSTStrategy
+{
 public:
     virtual ~MSTStrategy() = default;
-    virtual std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph& graph) = 0;
+    virtual std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph &graph) = 0;
 };
 
-#endif 
+#endif

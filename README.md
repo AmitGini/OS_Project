@@ -19,11 +19,9 @@ This project implements various **design patterns** and **algorithms** in **C++*
 - **PrimStrategy**: Implements Prim's algorithm for MST.
 - **KruskalStrategy**: Implements Kruskal's algorithm for MST.
 - **MSTFactory**: Factory class to create MST strategy objects.
-- **RequestService**: Abstract class for handling client requests.
-- **TaskQueue**: Implements a task queue for Active Object pattern.
-- **ActiveObjectDP**: Implements Active Object pattern.
-- **PipeDP**: Implements a pipeline of Active Objects.
-- **LeaderFollowerDP**: Implements Leader-Follower thread pool pattern.
+- **ActiveObject**: Implements Active Object pattern.
+- **Pipeline**: Implements a pipeline of Active Objects.
+- **LeaderFollower**: Implements Leader-Follower thread pool pattern.
 - **Server**: Implements the server handling client connections.
 
 ## Getting Started
@@ -51,28 +49,24 @@ This project implements various **design patterns** and **algorithms** in **C++*
 
 1. Start the server:
     ```bash
-    ./graph -p  # For PipeDP
-    ./graph -l  # For LeaderFollowerDP
+    ./graph
     ```
 
 ### Debug Options
 
 1. **Valgrind Memory Check**: Run Valgrind to check for memory leaks.
    ```bash
-   make memcheck_pipe
-   make memcheck_lf
+   make memcheck
    ```
 
 2. **Helgrind Thread Error Detector**: Run Helgrind to detect synchronization errors.
    ```bash
-   make helgrind_pipe
-   make helgrind_lf
+   make helgrind
    ```
 
 3. **Callgrind Performance Profiler**: Generate callgraphs to analyze performance.
    ```bash
-   make callgraph_pipe
-   make callgraph_lf
+   make callgraph
    ```
 
 4. **Coverage Testing**: Generate code coverage reports.
@@ -102,29 +96,21 @@ The `KruskalStrategy` class implements Kruskal's algorithm for computing MST.
 
 The `MSTFactory` class provides a method to create MST strategy objects based on the specified algorithm type.
 
-### RequestService
+### ActiveObject
 
-The `RequestService` class is an abstract base class for handling client requests. It provides methods to create/modify graphs, compute MST, and send messages to clients.
+The `ActiveObject` class implements the Active Object pattern. It manages a task queue and a worker thread to process tasks asynchronously.
 
-### TaskQueue
+### Pipeline
 
-The `TaskQueue` class implements a task queue for the Active Object pattern. It provides methods to enqueue and execute tasks.
+The `Pipeline` class implements a pipeline of Active Objects. It sets up a series of stages, each represented by an `ActiveObject`, and connects them to form a pipeline.
 
-### ActiveObjectDP
+### LeaderFollower
 
-The `ActiveObjectDP` class implements the Active Object pattern. It manages a task queue and a worker thread to process tasks asynchronously.
-
-### PipeDP
-
-The `PipeDP` class implements a pipeline of Active Objects. It sets up a series of stages, each represented by an `ActiveObjectDP`, and connects them to form a pipeline.
-
-### LeaderFollowerDP
-
-The `LeaderFollowerDP` class implements the Leader-Follower thread pool pattern. It manages a pool of threads to handle client requests and execute tasks.
+The `LeaderFollower` class implements the Leader-Follower thread pool pattern. It manages a pool of threads to handle client requests and execute tasks.
 
 ### Server
 
-The `Server` class handles client connections and delegates request processing to the appropriate design pattern (PipeDP or LeaderFollowerDP).
+The `Server` class handles client connections and delegates request processing to the appropriate design pattern (Pipeline or LeaderFollower).
 
 ## License
 

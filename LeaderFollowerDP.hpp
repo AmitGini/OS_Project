@@ -1,52 +1,36 @@
-#ifndef LEADERFOLLOWERDP_HPP
-#define LEADERFOLLOWERDP_HPP
+#ifndef LEADERFOLLOWER_HPP
+#define LEADERFOLLOWER_HPP
 
 #include <iostream>
 #include <functional>
 #include <queue>
+#include <vector>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
-#include <optional> // for std::optional 
 #include <atomic>
-#include "TaskQueue.hpp"
-#include "RequestService.hpp"
 #include <map>
+#include "Graph.hpp"
 
-class LeaderFollowerDP : public RequestService {
-
+class LeaderFollowerDP
+{
 private:
-    // Constants
-    static constexpr int NO_LEADER = -1; // No leader
-    static constexpr int CONVERSATION = 0; // Conversation with client
-    static constexpr int TASKS = 1; // Tasks execution 
-
-    // Thread managment
-    std::vector<std::thread> threadsPool; // Thread pool that holds the threads
-    std::mutex mtx; // Mutex for the threads
-    std::condition_variable cv; // Condition variable for the threads
-    std::atomic<int> leaderIndex; // Index of the leader thread
-    std::atomic<bool> stop{false}; // Flag to stop the threads
-    std::atomic<bool> toCloseClient{false}; // Flag to close the client
-
-    // Task managment
-    TaskQueue tasksQueue;
-    int client_fd; // Client file descriptor
-
+    std::queue<std::weak_ptr<Graph>> queue_taskData;       // Task queue for the active object
+    std::vector<std::unique_ptr<std::thread>> threadsPool; // Thread pool that holds the threads
+    std::mutex mtx_lf;                                     // Mutex for the threads
+    std::condition_variable cv_lf;                         // Condition variable for the threads
+    std::atomic<bool> stop{false};                         // Flag to stop the threads
 
     // Private methods
-    void tasksEnqueing(); // Enqueues tasks
-    void tasksExecution(); // Executes tasks
-    bool enqueingChoices(int choice); // manages the enqueing of choices 
-    void promoteFollower(int follower);  // Promotes a follower to leader
-    // void handleError(const std::string& error_msg);
-    // void cleanupResources();
-    
+    void work();            // Enqueues tasks
+    void tasksExecution();  // Executes tasks
+    void promoteFollower(); // Promotes a follower to leader
+
 public:
     LeaderFollowerDP();
     ~LeaderFollowerDP();
-    void handleRequest(int& client_FD) override;
 
+    void processGraphs(std::vector<std::weak_ptr<Graph>> &graphs); // Process the graphs
 };
 
-#endif 
+#endif

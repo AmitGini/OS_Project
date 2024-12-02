@@ -73,6 +73,8 @@
         "__node_handle": "cpp",
         "__tree": "cpp",
         "print": "cpp",
-        "__hash_table": "cpp"
+        "__hash_table": "cpp",
+        "map": "cpp",
+        "fstream": "cpp"
     }
 }

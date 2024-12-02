@@ -6,7 +6,8 @@
 #include "PrimStrategy.hpp"
 #include <memory>
 
-class MSTFactory{
+class MSTFactory
+{
 public:
     enum AlgorithmType
     {
@@ -14,16 +15,18 @@ public:
         Kruskal
     };
 
-    static std::unique_ptr<MSTStrategy> createMSTStrategy(AlgorithmType type) {
-        switch (type) {
-            case AlgorithmType::Kruskal:
-                return std::make_unique<KruskalStrategy>();
-            case AlgorithmType::Prim:
-                return std::make_unique<PrimStrategy>();
-            default:
-                throw std::invalid_argument("Unknown MST Algorithm Type");
+    static std::unique_ptr<MSTStrategy> createMSTStrategy(AlgorithmType type)
+    {
+        switch (type)
+        {
+        case AlgorithmType::Kruskal:
+            return std::make_unique<KruskalStrategy>();
+        case AlgorithmType::Prim:
+            return std::make_unique<PrimStrategy>();
+        default:
+            throw std::invalid_argument("Unknown MST Algorithm Type");
         }
     }
 };
 
-#endif 
+#endif

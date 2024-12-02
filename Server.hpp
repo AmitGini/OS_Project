@@ -13,33 +13,33 @@
 #include <arpa/inet.h>
 #include <vector>
 #include <thread>
-#include "RequestService.hpp"
-#include "PipeDP.hpp"
-#include "LeaderFollowerDP.hpp"
-  
+#include "Pipeline.hpp"
+#include "LeaderFollower.hpp"
 
-#define PORT 4040
-
-class Server {
+class Server
+{
 private:
-    std::vector<std::pair<int, std::shared_ptr<std::thread>>> clients_dataset;  // Vector to store client data: socket and thread
-    std::unique_ptr<RequestService> patternType;  // Pointer to the thread design pattern 
-    std::mutex clients_mutex;
-    std::atomic<bool> stopServer{false};  // Flag to stop the server
-    struct sockaddr_in address{};  // Address structure
-    int server_fd{-1};  // File descriptor for the server
+    std::vector<std::shared_ptr<Graph>> graphsData;                            // Vector to store graphs
+    std::vector<std::pair<int, std::unique_ptr<std::thread>>> clients_dataset; // Vector to store client data: socket and thread
+    std::mutex clients_mutex;                                                  // Mutex for the clients for
+    std::atomic<bool> stopServer{false};                                       // Flag to stop the server
+    struct sockaddr_in address{};                                              // Address structure
+    int server_fd{-1};                                                         // File descriptor for the server
+    Pipeline *pipeline;                                                        // Pointer to the Pipeline pattern
+    LeaderFollower *leaderfollower;                                            // Pointer to the Leader-Follower pattern
 
-    void start();  // Start the server
-    void handleConnections();  // Handle client connections
-    void acceptClientAccess(int client_socket);  // Initialize the client 
+    void startServer();                    // Start the server
+    void handleConnections();              // Handle client connections
+    void handleRequest(int client_socket); // Handle client requests
+    void sendMessage(int client_FD, const std::string message);
+    void graphCreation(int client_FD); // All the progress to create graph and store it (include mst calculation)
+    void sendDataToLeaderFollower(int client_FD);
+    void sendDataToPipeline(int client_FD); // Send data to Pipeline
+    int startConversation(int client_FD);   // Start the conversation with the client
+
 public:
-    Server(bool isPipe);  // Constructor
-    ~Server();  // Destructor
-    
-    void stop();  // Stop the server    
-
-
+    Server();  // Constructor
+    ~Server(); // Destructor
 };
-
 
 #endif

@@ -4,7 +4,7 @@
 CXX = g++
 CXXFLAGS = -g -std=c++17
 COVFLAGS = -fprofile-arcs -ftest-coverage
-OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o RequestService.o PipeDP.o ActiveObjectDP.o LeaderFollowerDP.o TaskQueue.o
+OBJECTS = main.o Graph.o KruskalStrategy.o PrimStrategy.o Server.o Pipeline.o ActiveObject.o LeaderFollower.o
 
 # Default target
 all: graph
@@ -109,12 +109,7 @@ coverage: CXXFLAGS += $(COVFLAGS)  # Add coverage flags
 coverage: graph # compile graph with coverage flags
 # Create coverage directory
 	mkdir -p coverage
-# Run the program with test cases
-	-./graph -p -l
-	-./graph -k
-	-./graph asfasf 12312
-	./graph -p
-	./graph -l
+	-./graph
 # Generate coverage data in coverage directory
 	mkdir -p coverage/gcov
 	gcov -o . main.cpp > coverage/gcov/main.cpp.gcov
@@ -122,11 +117,9 @@ coverage: graph # compile graph with coverage flags
 	gcov -o . KruskalStrategy.cpp > coverage/gcov/KruskalStrategy.cpp.gcov
 	gcov -o . PrimStrategy.cpp > coverage/gcov/PrimStrategy.cpp.gcov
 	gcov -o . Server.cpp > coverage/gcov/Server.cpp.gcov
-	gcov -o . RequestService.cpp > coverage/gcov/RequestService.cpp.gcov
-	gcov -o . PipeDP.cpp > coverage/gcov/PipeDP.cpp.gcov
-	gcov -o . ActiveObjectDP.cpp > coverage/gcov/ActiveObjectDP.cpp.gcov
-	gcov -o . TaskQueue.cpp > coverage/gcov/TaskQueue.cpp.gcov
-	gcov -o . LeaderFollowerDP.cpp > coverage/gcov/LeaderFollowerDP.cpp.gcov
+	gcov -o . Pipeline.cpp > coverage/gcov/Pipeline.cpp.gcov
+	gcov -o . ActiveObject.cpp > coverage/gcov/ActiveObject.cpp.gcov
+	gcov -o . LeaderFollower.cpp > coverage/gcov/LeaderFollower.cpp.gcov
 	mv *.gcov coverage/gcov/
 	mv *.gcda coverage/
 	mv *.gcno coverage/
@@ -136,7 +129,7 @@ coverage: graph # compile graph with coverage flags
 	genhtml coverage/coverage.info --output-directory coverage/html
 
 # Rule to compile the source files
-main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp RequestService.hpp PipeDP.hpp LeaderFollowerDP.hpp
+main.o: main.cpp Graph.hpp Server.hpp MSTFactory.hpp MSTStrategy.hpp Pipeline.hpp LeaderFollower.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 Graph.o: Graph.cpp Graph.hpp
@@ -151,20 +144,15 @@ PrimStrategy.o: PrimStrategy.cpp MSTStrategy.hpp PrimStrategy.hpp
 Server.o: Server.cpp Server.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-RequestService.o: RequestService.cpp RequestService.hpp
+ActiveObject.o: ActiveObject.cpp Pipeline.hpp ActiveObject.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-ActiveObjectDP.o: ActiveObjectDP.cpp PipeDP.hpp ActiveObjectDP.hpp TaskQueue.hpp
+Pipeline.o: Pipeline.cpp Pipeline.hpp ActiveObject.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-PipeDP.o: PipeDP.cpp RequestService.hpp PipeDP.hpp ActiveObjectDP.hpp TaskQueue.hpp
+LeaderFollower.o: LeaderFollower.cpp LeaderFollower.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-LeaderFollowerDP.o: LeaderFollowerDP.cpp RequestService.hpp LeaderFollowerDP.hpp TaskQueue.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-TaskQueue.o: TaskQueue.cpp TaskQueue.hpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean up
 clean:
