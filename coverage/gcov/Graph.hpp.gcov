@@ -1,0 +1,53 @@
+        -:    0:Source:Graph.hpp
+        -:    1:#ifndef GRAPH_HPP
+        -:    2:#define GRAPH_HPP
+        -:    3:
+        -:    4:#include <vector>
+        -:    5:#include <sstream>
+        -:    6:#include <stdexcept>
+        -:    7:#include <climits>
+        -:    8:#include <memory>
+        -:    9:#include "MSTStrategy.hpp"
+        -:   10:
+        -:   11:class Graph
+        -:   12:{
+        -:   13:private:
+        -:   14:    std::vector<std::vector<int>> graphMatrix;                // Adjacency matrix - graph representations
+        -:   15:    std::unique_ptr<std::vector<std::vector<int>>> mstMatrix; // Smart pointer to the mst matrix
+        -:   16:    int numVertices;                                          // Number of vertices in graph
+        -:   17:    int numEdges;                                             // Number of edges in graph
+        -:   18:    int mstDataStatus;                                        // Flag to check if MST data has been computed
+        -:   19:    int mstTotalWeight;                                       // Total weight of MST
+        -:   20:    int mstLongestDistance;                                   // Longest distance in MST
+        -:   21:    int mstShortestDistance;                                  // Shortest distance in MST
+        -:   22:    double mstAvgEdgeWeight;                                  // Average edge weight in MST
+        -:   23:    std::unique_ptr<MSTStrategy> mstStrategy;                                 // Pointer to the MST strategy
+        -:   24:
+        -:   25:public:
+        -:   26:    Graph(int vertices);
+    #####:   27:    ~Graph() = default; // RAII - Destructor
+        -:   28:
+        -:   29:    // Origin Graph Functions
+        -:   30:    void addEdge(int u, int v, int weight);                // Add edge to graph
+        -:   31:    int getSizeVertices() const;                           // Get number of vertices
+        -:   32:    const std::vector<std::vector<int>> &getGraph() const; // Get adjacency matrix
+        -:   33:
+        -:   34:    // Setter methods for MST
+        -:   35:    void activateMSTStrategy();
+        -:   36:    void setMSTDataCalculationNextStatus();
+        -:   37:    void setMSTTotalWeight();
+        -:   38:    void setMSTLongestDistance();
+        -:   39:    void setMSTShortestDistance();
+        -:   40:    void setMSTAvgEdgeWeight();
+        -:   41:    void setMSTStrategy(std::unique_ptr<MSTStrategy> strategy);
+        -:   42:
+        -:   43:    bool getValidationMSTExist() const;
+        -:   44:    int getMSTDataStatusCalculation() const;
+        -:   45:    int getMSTTotalWeight() const;
+        -:   46:    int getMSTLongestDistance() const;
+        -:   47:    int getMSTShortestDistance() const;
+        -:   48:    double getMSTAvgEdgeWeight() const;
+        -:   49:    std::string printMST() const;
+        -:   50:};
+        -:   51:
+        -:   52:#endif

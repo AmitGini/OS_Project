@@ -25,7 +25,6 @@ private:
 
     void work();        // Work function for the active object
     void stopProcess(); // After stop flag detected - initial process to stop the active object before destruction
-    void printStatus(); // Print the status of the active object
 
 public:
     ActiveObject(int stage);                                                     // Constructor

@@ -1,0 +1,159 @@
+        -:    0:Source:LeaderFollower.cpp
+        -:    1:#include "LeaderFollower.hpp"
+        -:    2:
+        -:    3:#define NO_PROCESS -1
+        -:    4:#define AT_PROCESS 0
+        -:    5:#define FINISH_PROCESS 1
+        -:    6:
+        -:    7:// Constructor
+    #####:    8:LeaderFollower::LeaderFollower() : stop(false)
+        -:    9:{
+        -:   10:
+    #####:   11:    std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   12:    std::cout << "Starting Leader Follower Design Pattern" << std::endl;
+    #####:   13:    for (int i = 0; i < this->numThreads.load(); i++)
+        -:   14:    {
+    #####:   15:        this->threadsPool.push(std::make_unique<std::thread>(&LeaderFollower::work, this));
+        -:   16:    }
+    #####:   17:    std::cout << "Leader-Follower: Threads Created and Added to Pool." << std::endl;
+    #####:   18:}
+        -:   19:
+        -:   20:
+        -:   21:// Destructor
+    #####:   22:LeaderFollower::~LeaderFollower()
+        -:   23:{
+        -:   24:    {
+    #####:   25:        std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   26:        std::cout << "\n********* START Leader-Follower Stop Process *********" << std::endl;
+    #####:   27:        this->stop = true;
+    #####:   28:    }
+        -:   29:
+    #####:   30:    while (!this->queue_taskData.empty())
+        -:   31:    {
+    #####:   32:        std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   33:        this->queue_taskData.pop();
+    #####:   34:    }
+        -:   35:
+        -:   36:    {
+    #####:   37:        std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   38:        std::cout << "\nLeader-Follower: Task Queue is Empty" << std::endl;
+    #####:   39:    }
+    #####:   40:    this->cv_lf.notify_all(); // Notify all threads to exit
+        -:   41:
+    #####:   42:    while (!this->threadsPool.empty())
+        -:   43:    {
+    #####:   44:        auto &thread = this->threadsPool.front();
+    #####:   45:        if (thread->joinable())
+        -:   46:        {
+    #####:   47:            thread->join();
+        -:   48:        }
+    #####:   49:        this->threadsPool.pop();
+        -:   50:    }
+    #####:   51:    std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   52:    std::cout << "\nLeader-Follower: Threads Pool is Clean and Threads Joined" << std::endl;
+    #####:   53:    std::cout << "\n********* FINISH Leader-Follower Stop Process *********" << std::endl;
+    #####:   54:}
+        -:   55:
+        -:   56:// Function that Recive data from the server to process
+    #####:   57:void LeaderFollower::processGraphs(std::vector<std::weak_ptr<Graph>>& graphs)
+        -:   58:{
+        -:   59:    {
+    #####:   60:        std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   61:        for (const auto& graph : graphs)
+        -:   62:        {
+    #####:   63:            this->queue_taskData.push(graph);
+        -:   64:        }
+    #####:   65:        std::cout << "Leader-Follower: Graphs Added to Task Queue." << std::endl;
+    #####:   66:    }
+    #####:   67:    promoteFollower();
+    #####:   68:}
+        -:   69:
+        -:   70:// Start the conversation with the client
+    #####:   71:void LeaderFollower::work() 
+        -:   72:{
+    #####:   73:    while (!this->stop) 
+        -:   74:    {
+        -:   75:        {
+    #####:   76:            std::unique_lock<std::mutex> lock(this->mtx_lf);
+    #####:   77:            this->cv_lf.wait(lock, [this]
+    #####:   78:                { return  (!this->queue_taskData.empty() && isLeader())  || this->stop; });
+    #####:   79:        }
+    #####:   80:        if (this->stop) 
+        -:   81:        {
+    #####:   82:            return;
+        -:   83:        } 
+        -:   84:        else 
+        -:   85:        {
+    #####:   86:            executeTask();
+    #####:   87:            promoteFollower();
+        -:   88:        }
+        -:   89:    }
+        -:   90:}
+        -:   91:
+    #####:   92:void LeaderFollower::executeTask() 
+        -:   93:{
+    #####:   94:    std::shared_ptr<Graph> currentGraph;
+        -:   95:    {
+    #####:   96:        std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:   97:        if (this->queue_taskData.empty()) return;
+        -:   98:        /* 
+        -:   99:            If the graph is valid  (return value of lock is not NULL) 
+        -:  100:                Do:
+        -:  101:                Set currenGraph, pop and continue to execute 
+        -:  102:                Else:
+        -:  103:                just pop from the queue and return
+        -:  104:        */
+    #####:  105:        if (auto graph = this->queue_taskData.front().lock()) 
+        -:  106:        {
+    #####:  107:            currentGraph = graph;
+    #####:  108:            this->queue_taskData.pop();
+        -:  109:        } 
+        -:  110:        else 
+        -:  111:        {
+    #####:  112:            this->queue_taskData.pop();
+    #####:  113:            return;
+    #####:  114:        }
+    #####:  115:    }
+        -:  116:
+        -:  117:    // Process the graph
+    #####:  118:    currentGraph->setMSTDataCalculationNextStatus();
+    #####:  119:    currentGraph->setMSTTotalWeight();
+    #####:  120:    currentGraph->setMSTLongestDistance();
+    #####:  121:    currentGraph->setMSTShortestDistance();
+    #####:  122:    currentGraph->setMSTAvgEdgeWeight();
+    #####:  123:    currentGraph->setMSTDataCalculationNextStatus();
+    #####:  124:}
+        -:  125:
+    #####:  126:void LeaderFollower::promoteFollower() 
+        -:  127:{
+    #####:  128:    std::unique_lock<std::mutex> lock(this->mtx_lf);
+        -:  129:    // If the current leader is not empty, then push the current leader (in front) to the back of the queue
+    #####:  130:    if(isLeader()) 
+        -:  131:    {
+    #####:  132:        this->threadsPool.push(std::move(this->threadsPool.front()));
+    #####:  133:        this->threadsPool.pop();
+        -:  134:    }
+        -:  135:
+    #####:  136:    lock.unlock();
+        -:  137:    // If the queue is empty, then set the leader to empty
+    #####:  138:    if (this->queue_taskData.empty()) 
+        -:  139:    {
+    #####:  140:        setLeader(std::thread::id());
+        -:  141:    }
+        -:  142:    else  // Else, set the leader to the front of the queue
+        -:  143:    {
+    #####:  144:        setLeader(this->threadsPool.front()->get_id());
+    #####:  145:        this->cv_lf.notify_all();
+        -:  146:    }
+    #####:  147:}
+        -:  148:
+    #####:  149:bool LeaderFollower::isLeader() 
+        -:  150:{
+    #####:  151:    return std::this_thread::get_id() == currentLeader.load();
+        -:  152:}
+        -:  153:
+    #####:  154:void LeaderFollower::setLeader(std::thread::id id) 
+        -:  155:{
+    #####:  156:    std::lock_guard<std::mutex> lock(this->mtx_lf);
+    #####:  157:    currentLeader.store(id);
+    #####:  158:}

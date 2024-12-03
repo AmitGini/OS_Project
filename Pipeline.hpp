@@ -12,7 +12,7 @@ class Pipeline
 private:
     // Private members
     std::vector<std::shared_ptr<ActiveObject>> stages; // Vector of active objects (we used shared_ptr to avoid memory leaks)
-    std::mutex pipeMtx;                                // Mutex for the pipe
+    std::mutex mtx;                                // Mutex for the pipe
 
     // Private methods
     void createAOStages(); // Setup the pipe with active objects

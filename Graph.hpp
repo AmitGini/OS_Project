@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <climits>
 #include <memory>
-#include <iostream>
 #include "MSTStrategy.hpp"
 
 class Graph

@@ -11,6 +11,10 @@
 
 Pipeline::Pipeline()
 {
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::cout << "Starting Pipeline Design Pattern" << std::endl;
+    }
     createAOStages();
     setAONextStage();
     setTaskHandler();
@@ -18,17 +22,20 @@ Pipeline::Pipeline()
 
 Pipeline::~Pipeline()
 {
-    std::cout << "\n********* START Pipeline Stop Process *********" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::cout << "\n********* START Pipeline Stop Process *********" << std::endl;
+    }
 
     // Lock the mutex to ensure thread safety
-    std::lock_guard<std::mutex> lock(pipeMtx);
     for (auto stage : stages)
     {
         stage->stopActiveObject(); // Stop the active object
     }
-
+    
     // Clear the stages vector to release the shared_ptr resources
     stages.clear();
+    std::lock_guard<std::mutex> lock(mtx);
     std::cout << "\nPipeline: Cleared Active-Object Stages " << std::endl;
     std::cout << "\n********* FINISH Pipeline Stop Process *********" << std::endl;
 }
@@ -36,8 +43,7 @@ Pipeline::~Pipeline()
 // Process the graphs that sended from the server
 void Pipeline::processGraphs(std::vector<std::weak_ptr<Graph>> &graphs)
 {
-    // Lock the mutex to ensure thread safety
-    std::lock_guard<std::mutex> lock(this->pipeMtx);
+    // Lock mutex is done in the active object enqueueTask function
     for (auto graph : graphs)
     {
         stages[STAGE_0_START_MST_CALCULATION]->enqueueTask(graph); // enqueue the weak ptr although we have used shared ptr for validation
@@ -49,16 +55,17 @@ void Pipeline::createAOStages()
     try
     {
         // Create stages with error checking
+        std::lock_guard<std::mutex> lock(mtx);
         for (int stageNumber = STAGE_0_START_MST_CALCULATION; stageNumber <= STAGE_5_FINISH_MST_CALCUATION; ++stageNumber)
         {
-            std::cout << "***** " << "Creating stage " << stageNumber << " *****" << std::endl;
+            std::cout << "***** " << "Pipeline: Creating stage " << stageNumber << " *****" << std::endl;
             stages.push_back(std::make_shared<ActiveObject>(stageNumber)); // Create a shared pointer to an active object
-            std::cout << "Stage " << stageNumber << " created successfully" << std::endl;
+            std::cout << "Pipeline: Stage " << stageNumber << " created successfully" << std::endl;
         }
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Stage creation failed: " << e.what() << std::endl;
+        std::cerr << "Pipeline: Stage creation failed: " << e.what() << std::endl;
         throw;
     }
 }

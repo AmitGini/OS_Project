@@ -1,0 +1,81 @@
+        -:    0:Source:PrimStrategy.cpp
+        -:    1:#include "PrimStrategy.hpp"
+        -:    2:#include <iostream>
+        -:    3:#include <algorithm>
+        -:    4:
+    #####:    5:std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix)
+        -:    6:{
+        -:    7:    {
+    #####:    8:        std::lock_guard<std::mutex> cout_lock(cout_mtx);
+    #####:    9:        std::cout << "Strategy Activated - Start Compute MST using Prim" << std::endl;
+    #####:   10:    }
+    #####:   11:    int numVertices = graphAdjacencyMatrix.size();
+        -:   12:    
+    #####:   13:    if (numVertices == 0)
+    #####:   14:        return nullptr;
+        -:   15:
+    #####:   16:    std::vector<int> minEdgeToVertex(numVertices, std::numeric_limits<int>::max());
+    #####:   17:    std::vector<int> parentVertex(numVertices, -1);
+    #####:   18:    std::vector<bool> isInMST(numVertices, false);
+        -:   19:    std::priority_queue<std::pair<int, int>,
+        -:   20:                        std::vector<std::pair<int, int>>,
+        -:   21:                        std::greater<std::pair<int, int>>>
+    #####:   22:        minEdgeQueue;
+        -:   23:
+        -:   24:    // Find the first non-isolated vertex
+    #####:   25:    int startVertex = 0;
+    #####:   26:    for (int i = 0; i < numVertices; ++i)
+        -:   27:    {
+    #####:   28:        if (std::any_of(graphAdjacencyMatrix[i].begin(), graphAdjacencyMatrix[i].end(), [](int w)
+    #####:   29:                        { return w != 0; }))
+        -:   30:        {
+    #####:   31:            startVertex = i;
+    #####:   32:            break;
+        -:   33:        }
+        -:   34:    }
+        -:   35:
+        -:   36:    
+        -:   37:
+    #####:   38:    minEdgeToVertex[startVertex] = 0;
+    #####:   39:    minEdgeQueue.push({0, startVertex});
+        -:   40:
+    #####:   41:    while (!minEdgeQueue.empty())
+        -:   42:    {
+    #####:   43:        int currentVertex = minEdgeQueue.top().second;
+    #####:   44:        minEdgeQueue.pop();
+        -:   45:
+    #####:   46:        if (isInMST[currentVertex])
+    #####:   47:            continue;
+        -:   48:
+    #####:   49:        isInMST[currentVertex] = true;
+        -:   50:
+    #####:   51:        for (int adjacentVertex = 0; adjacentVertex < numVertices; ++adjacentVertex)
+        -:   52:        {
+    #####:   53:            int weight = graphAdjacencyMatrix[currentVertex][adjacentVertex];
+    #####:   54:            if (weight != 0 && !isInMST[adjacentVertex] && weight < minEdgeToVertex[adjacentVertex])
+        -:   55:            {
+    #####:   56:                parentVertex[adjacentVertex] = currentVertex;
+    #####:   57:                minEdgeToVertex[adjacentVertex] = weight;
+    #####:   58:                minEdgeQueue.push({weight, adjacentVertex});
+        -:   59:            }
+        -:   60:        }
+        -:   61:    }
+        -:   62:
+        -:   63:    auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
+    #####:   64:        numVertices, std::vector<int>(numVertices, 0));
+        -:   65:
+    #####:   66:    for (int vertex = 0; vertex < numVertices; ++vertex)
+        -:   67:    {
+    #####:   68:        int parent = parentVertex[vertex];
+    #####:   69:        if (parent != -1)
+        -:   70:        {
+    #####:   71:            int weight = graphAdjacencyMatrix[parent][vertex];
+    #####:   72:            (*mstMatrix)[parent][vertex] = weight;
+    #####:   73:            (*mstMatrix)[vertex][parent] = weight;
+        -:   74:        }
+        -:   75:    }
+        -:   76:
+    #####:   77:    std::lock_guard<std::mutex> cout_lock(cout_mtx);
+    #####:   78:    std::cout << "Finish Compute MST using Prim" << std::endl;
+    #####:   79:    return mstMatrix;
+    #####:   80:}

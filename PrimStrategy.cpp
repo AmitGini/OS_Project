@@ -4,10 +4,12 @@
 
 std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix)
 {
-    std::cout << "Strategy Activated - Start Compute MST using Prim" << std::endl;
+    {
+        std::lock_guard<std::mutex> cout_lock(cout_mtx);
+        std::cout << "Strategy Activated - Start Compute MST using Prim" << std::endl;
+    }
     int numVertices = graphAdjacencyMatrix.size();
     
-
     if (numVertices == 0)
         return nullptr;
 
@@ -61,7 +63,6 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const st
     auto mstMatrix = std::make_unique<std::vector<std::vector<int>>>(
         numVertices, std::vector<int>(numVertices, 0));
 
-    std::cout << "Constructing MST:" << std::endl;
     for (int vertex = 0; vertex < numVertices; ++vertex)
     {
         int parent = parentVertex[vertex];
@@ -72,6 +73,8 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const st
             (*mstMatrix)[vertex][parent] = weight;
         }
     }
+
+    std::lock_guard<std::mutex> cout_lock(cout_mtx);
     std::cout << "Finish Compute MST using Prim" << std::endl;
     return mstMatrix;
 }

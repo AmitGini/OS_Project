@@ -13,76 +13,67 @@ all: graph
 graph: $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Generate callgraph
-callgraph: client_script.sh graph
+# run callgrind in the terminal
+callgrind: client_script.sh graph
+	rm -rf callgrind_data
 	chmod +x client_script.sh
-# Start the server in the background
-	./graph & echo $$! > server_pid.txt
-# Wait until the server is listening on port 4040
+	valgrind --tool=callgrind --dump-instr=yes --simulate-cache=yes --collect-jumps=yes ./graph & echo $$! > server_pid.txt
 	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-# Run the client script
-	./client_script.sh || true
-# Run valgrind for callgraph analysis
-	valgrind --tool=callgrind --dump-instr=yes --simulate-cache=yes --collect-jumps=yes ./graph
-# Annotate the callgraph
-	@callgrind_file=$$(ls callgrind.out.* | head -n 1) && \
-	echo "Using $$callgrind_file for callgraph" && \
-	callgrind_annotate $$callgrind_file > callgraph_report.txt && \
-	mv $$callgrind_file callgraph_data.txt
-
-
-# Run Memcheck for Pipe Active Object
-memcheck: client_script.sh graph
-	chmod +x client_script.sh
-# Start the server in the background
-	./graph & echo $$! > server_pid.txt
-# Wait until the server is listening on port 4040
-	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-# Run the client script
-	./client_script.sh || true
-# Run valgrind Memcheck analysis
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./graph 2> memcheck_output.txt
-# Stop the server
-	kill $$(cat server_pid.txt) || true
+	./client_script.sh
+	kill $$(cat server_pid.txt)
+	sleep 1
+	@callgrind_file=$$(ls callgrind.out.* | sort -n | tail -n 1) && \
+	echo "Using $$callgrind_file for callgrind_report" && \
+	callgrind_annotate $$callgrind_file > callgrind_report.txt && \
+	mkdir -p callgrind_data && \
+	mv $$callgrind_file callgrind_data/ && \
+	mv callgrind_report.txt callgrind_data/
 	rm -f server_pid.txt
 
-
-# Run Helgrind for Pipe Active Object
-helgrind: client_script.sh graph
+# Run memcheck in the terminal
+memcheck: client_script.sh graph
+	rm -rf memcheck_data
+	mkdir -p memcheck_data
 	chmod +x client_script.sh
-# Start the server in the background
-	./graph & echo $$! > server_pid.txt
-# Wait until the server is listening on port 4040
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=memcheck_data/memcheck_output.txt ./graph & echo $$! > server_pid.txt
 	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-# Run the client script
-	./client_script.sh || true
-# Run Helgrind analysis
-	valgrind --tool=helgrind --log-file=helgrind_report.log ./graph
-	@echo "Helgrind analysis saved to helgrind_report.log"
+	./client_script.sh
+	kill $$(cat server_pid.txt)
+	sleep 1
+	rm -f server_pid.txt
+
+# Run helgrind in the terminal
+helgrind: client_script.sh graph
+	rm -rf helgrind_data
+	mkdir -p helgrind_data
+	chmod +x client_script.sh
+	valgrind --tool=helgrind --log-file=helgrind_data/helgrind_report.log ./graph & echo $$! > server_pid.txt
+	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
+	./client_script.sh
+	kill $$(cat server_pid.txt)
+	sleep 1
+	rm -f server_pid.txt
+	@echo "Helgrind analysis saved to helgrind_data/helgrind_report.log"
 
 
 # Target to compile with coverage flags
-coverage: CXXFLAGS += $(COVFLAGS)  # Add coverage flags
-coverage: graph # compile graph with coverage flags
-# Create coverage directory
-	mkdir -p coverage
-	-./graph
-# Generate coverage data in coverage directory
+coverage: CXXFLAGS += $(COVFLAGS)
+coverage: cleanCoverage graph
 	mkdir -p coverage/gcov
-	gcov -o . Graph.cpp > coverage/gcov/Graph.cpp.gcov
-	gcov -o . KruskalStrategy.cpp > coverage/gcov/KruskalStrategy.cpp.gcov
-	gcov -o . PrimStrategy.cpp > coverage/gcov/PrimStrategy.cpp.gcov
-	gcov -o . Server.cpp > coverage/gcov/Server.cpp.gcov
-	gcov -o . Pipeline.cpp > coverage/gcov/Pipeline.cpp.gcov
-	gcov -o . ActiveObject.cpp > coverage/gcov/ActiveObject.cpp.gcov
-	gcov -o . LeaderFollower.cpp > coverage/gcov/LeaderFollower.cpp.gcov
+	./graph & echo $$! > server_pid.txt
+	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
+	./client_script.sh
+	kill $$(cat server_pid.txt)
+	sleep 1
+	gcov -o . *.cpp
 	mv *.gcov coverage/gcov/
-	mv *.gcda coverage/
-	mv *.gcno coverage/
-# Generate HTML report
-	lcov --capture --directory coverage --output-file coverage/coverage.info
+	lcov --capture --directory . --output-file coverage/coverage.info
 	lcov --remove coverage/coverage.info '/usr/*' --output-file coverage/coverage.info
 	genhtml coverage/coverage.info --output-directory coverage/html
+	mkdir -p coverage/data
+	mv *.gcda coverage/data/
+	mv *.gcno coverage/data/
+	rm -f server_pid.txt
 
 # Rule to compile the source files
 Server.o: Server.cpp Server.hpp Graph.hpp  MSTFactory.hpp MSTStrategy.hpp Pipeline.hpp ActiveObject.hpp LeaderFollower.hpp 
@@ -106,11 +97,14 @@ Pipeline.o: Pipeline.cpp Graph.hpp Pipeline.hpp ActiveObject.hpp
 LeaderFollower.o: LeaderFollower.cpp Graph.hpp LeaderFollower.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-
 # Clean up
 clean:
 	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info
-	rm -rf profile_data callgraph_data html out
+	rm -rf profile_data callgrind_data html out
+
+cleanCoverage:
+	rm -f $(OBJECTS) graph *.gcda *.gcno
+	rm -rf coverage
 
 # Declare phony targets
 .PHONY: all clean

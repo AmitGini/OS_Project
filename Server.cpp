@@ -7,10 +7,11 @@
 // Constructor
 Server::Server(): server_fd(INVALID), pipeline(nullptr), leaderfollower(nullptr), stopServer(false)
 {
-    std::cout << "Start Building the Server..." << std::endl;
-    std::cout << "Starting Pipeline Design Pattern" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::cout << "Start Building the Server..." << std::endl;
+    }
     this->pipeline = new Pipeline();
-    std::cout << "Starting Leader Follower Design Pattern" << std::endl;
     this->leaderfollower = new LeaderFollower();
     startServer(); // Start the server
 }
@@ -18,30 +19,45 @@ Server::Server(): server_fd(INVALID), pipeline(nullptr), leaderfollower(nullptr)
 // Destructor
 Server::~Server()
 {
-    std::cout << "\n********* START Server Stop Process *********" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        std::cout << "\n********* START Server Stop Process *********" << std::endl;
+    }
+    
     delete pipeline;       // Delete the pipeline object
     delete leaderfollower; // Delete the leaderfollower object
+    {
+        std::unique_lock<std::mutex> lock(this->mtx);
+        for (auto &client : clients_dataset)
+        {
+            if (client.first >= 0)
+            {
+                lock.unlock();
+                close(client.first);
+                lock.lock();
+            }
+            if (client.second->joinable())
+            {
+                lock.unlock();
+                client.second->join();
+                lock.lock();
+            }
+        }
+        lock.unlock();
+        clients_dataset.clear();
+        lock.lock();
 
-    for (auto &client : clients_dataset)
-    {
-        if (client.first >= 0)
+        std::cout << "Server: All clients File Descriptor are CLOSED" << std::endl;
+        std::cout << "Server: All clients Threads are JOINED" << std::endl;
+        if (server_fd >= 0)
         {
-            close(client.first);
+            lock.unlock();
+            close(server_fd);
+            lock.lock();
         }
-        if (client.second->joinable())
-        {
-            client.second->join();
-        }
+        std::cout << "Server: Server File Descriptor CLOSE" << std::endl;
+        std::cout << "\n********* FINISH Server Stop Process *********" << std::endl;
     }
-    clients_dataset.clear();
-    std::cout << "Server: All clients File Descriptor are CLOSED" << std::endl;
-    std::cout << "Server: All clients Threads are JOINED" << std::endl;
-    if (server_fd >= 0)
-    {
-        close(server_fd);
-    }
-    std::cout << "Server: Server File Descriptor CLOSE" << std::endl;
-    std::cout << "\n********* FINISH Server Stop Process *********" << std::endl;
 }
 
 // Start the server
@@ -80,9 +96,10 @@ void Server::startServer()
         perror("listen");
         exit(EXIT_FAILURE);
     }
-
-    std::cout << "Server started listening on port " << PORT << std::endl;
-
+    {
+        std::lock_guard<std::mutex> lock(this->mtx);
+        std::cout << "Server started listening on port " << PORT << std::endl;
+    }
     // Handle incoming connections
     this->handleConnections();
 }
@@ -122,6 +139,7 @@ void Server::handleConnections()
             std::getline(std::cin, command); // Get the command from the user
             if (command == "stop")
             {
+                std::lock_guard<std::mutex> lock(this->mtx);
                 std::cout << "Command: " << command << std::endl;
                 stopServer = true;
                 break;
@@ -137,7 +155,7 @@ void Server::handleConnections()
                 perror("accept failed");
                 continue;
             }
-
+        
             std::lock_guard<std::mutex> lock(this->mtx); // Lock the mutex because we are modifying the clients vector
             std::cout << "New client connected!" << std::endl;
             auto client_thread = std::make_unique<std::thread>(&Server::handleRequest, this, new_socket);
@@ -322,7 +340,6 @@ void Server::graphCreation(int client_FD)
 
 void Server::sendDataToPipeline(int client_FD)
 {
-    std::lock_guard<std::mutex> lock(this->mtx);
     if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
     this->pipeline->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
     sendMessage(client_FD, "All graphs have been sent to Pipeline for processing using Active Object.\n");
@@ -330,7 +347,6 @@ void Server::sendDataToPipeline(int client_FD)
 
 void Server::sendDataToLeaderFollower(int client_FD)
 {
-    std::lock_guard<std::mutex> lock(this->mtx);
     if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
     this->leaderfollower->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
     sendMessage(client_FD, "All graphs have been sent to Leader-Follower for processing.\n");
@@ -354,6 +370,7 @@ void Server::filterUnprocessedGraphs()
         }
     }
     if(this->vec_WeakPtrGraphs_Unprocessed.size() != tempWeakGraphs.size()) {
+        std::lock_guard<std::mutex> lock(this->mtx);
         this->vec_WeakPtrGraphs_Unprocessed = std::move(tempWeakGraphs);  // prevent copying
         std::cout << "Unprocessed Graphs are filtered, remain " << tempWeakGraphs.size() <<" graphs to process"<< std::endl;
     }
@@ -405,6 +422,7 @@ void Server::stopClient(int client_FD)
         std::perror("Error: Invalid client file descriptor.");
     }
     close(client_FD);
+    std::lock_guard<std::mutex> lock(this->mtx);
     std::cout << "Client Connection Closed" << std::endl;
 }
 

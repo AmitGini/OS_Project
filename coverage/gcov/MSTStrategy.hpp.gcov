@@ -1,0 +1,31 @@
+        -:    0:Source:MSTStrategy.hpp
+        -:    1:#ifndef MSTSTRATEGY_HPP
+        -:    2:#define MSTSTRATEGY_HPP
+        -:    3:
+        -:    4:#include <memory>
+        -:    5:#include <vector>
+        -:    6:#include <mutex>
+        -:    7:#include <iostream>
+        -:    8:
+        -:    9:class MSTStrategy
+        -:   10:{
+        -:   11:public:
+        -:   12:    std::mutex cout_mtx;
+    #####:   13:    virtual ~MSTStrategy() = default;
+------------------
+_ZN11MSTStrategyD0Ev:
+    #####:   13:    virtual ~MSTStrategy() = default;
+------------------
+_ZN11MSTStrategyD2Ev:
+    #####:   13:    virtual ~MSTStrategy() = default;
+------------------
+_ZN11MSTStrategyD0Ev:
+    #####:   13:    virtual ~MSTStrategy() = default;
+------------------
+_ZN11MSTStrategyD2Ev:
+    #####:   13:    virtual ~MSTStrategy() = default;
+------------------
+        -:   14:    virtual std::unique_ptr<std::vector<std::vector<int>>> computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix) = 0;
+        -:   15:};
+        -:   16:
+        -:   17:#endif

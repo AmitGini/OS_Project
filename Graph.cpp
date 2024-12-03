@@ -6,6 +6,8 @@
 #define INIT_INTEGER 0
 #define INIT_DOUBLE 0.0
 
+
+
 Graph::Graph(int vertices)
     : numVertices(vertices), numEdges(INIT_INTEGER),
       mstTotalWeight(INIT_INTEGER), mstLongestDistance(INIT_INTEGER), mstShortestDistance(INT_MAX),
@@ -113,12 +115,7 @@ void Graph::setMSTDataCalculationNextStatus()
     else if (this->mstDataStatus == PROGRESS_MST_DATA_CALCULATION)
     {
         this->mstDataStatus = FINISH_MST_DATA_CALCULATION;
-    }
-    else
-    {
-        std::cout << "** WARNING ** Trying to update MST Data Status - When status is -Finish-" << std::endl;
-    }
-    std::cout<<"MST Data Status Updated to: "<<this->mstDataStatus<<std::endl;
+    }else return;
 }
 
 // Calculate and return the total weight of MST

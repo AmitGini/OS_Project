@@ -1,61 +1,65 @@
 #!/bin/bash
-nc localhost 4040
-sleep 1
-1
-sleep 1
-5
-sleep 1
-3
-sleep 1
-0
-sleep 1
-1
-sleep 1
-3
-sleep 1
-1
-sleep 1
-2
-sleep 1
-4
-sleep 1
-2
-sleep 1
-3
-sleep 1
-2
-sleep 1
-1
-sleep 1
-2
-sleep 1
-4
-sleep 1
-1
-sleep 1
-4
-sleep 1
-2
-sleep 1
-0
-sleep 1
-1
-sleep 1
-2
-sleep 1
-1
-sleep 1
-2
-sleep 1
-3
-sleep 1
-2
-sleep 1
-4
-sleep 1
-3
-sleep 1
-4
-sleep 1
-0
-sleep 1
+{
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "5"
+    sleep 0.5
+    echo "3"
+    sleep 0.5
+    echo "0"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "3"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "4"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "3"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "4"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "4"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "0"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "1"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "3"
+    sleep 0.5
+    echo "2"
+    sleep 0.5
+    echo "4"
+    sleep 0.5
+    echo "3"
+    sleep 0.5
+    echo "4"
+    sleep 0.5
+    echo "0"
+    sleep 0.5
+    echo "stop"
+    sleep 1
+} | telnet localhost 4040
+sleep 2

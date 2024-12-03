@@ -1,0 +1,170 @@
+        -:    0:Source:ActiveObject.cpp
+        -:    1:#include "ActiveObject.hpp"
+        -:    2:
+    #####:    3:ActiveObject::ActiveObject(int stage) : stageID(stage), working(false), stop(false)
+        -:    4:{
+    #####:    5:    this->queue_taskData = std::queue<std::weak_ptr<Graph>>();                           // task queue for the active object
+    #####:    6:    this->activeObjectThread = std::make_unique<std::thread>(&ActiveObject::work, this); // Create a new thread for the active object
+    #####:    7:}
+        -:    8:
+    #####:    9:ActiveObject::~ActiveObject()
+        -:   10:{
+        -:   11:    // // Check if the thread is joinable
+        -:   12:    {
+    #####:   13:        std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex 
+    #####:   14:        std::cout << "\nActive-Object - Stage " << stageID << " : Destruction Activated" << std::endl;
+    #####:   15:    }
+    #####:   16:    if (this->activeObjectThread && this->activeObjectThread->joinable())
+        -:   17:    {
+        -:   18:        {
+    #####:   19:            std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex 
+    #####:   20:            std::cout << "\nActive-Object - Stage " << stageID << ": Join Thread - Destruction" << std::endl;
+    #####:   21:        }
+    #####:   22:        this->activeObjectThread->join(); // Join the thread (wait for the thread to finish)
+        -:   23:    }
+        -:   24:
+    #####:   25:    this->activeObjectThread.reset(); // release unique ptr - before destruction join
+        -:   26:    {
+    #####:   27:        std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex 
+    #####:   28:        std::cout << "\nStage " << this->stageID << " (Active-Object):  Release smart pointer - Thread" << std::endl;
+    #####:   29:        std::cout << "\n********* FINISH Active Object " << stageID << " Stop Process *********" << std::endl;
+    #####:   30:    }
+    #####:   31:}
+        -:   32:
+        -:   33:// Set the next stage
+    #####:   34:void ActiveObject::setNextStage(std::weak_ptr<ActiveObject> wptr_nextStage)
+        -:   35:{
+    #####:   36:    if (wptr_nextStage.lock() != nullptr)
+        -:   37:    {
+    #####:   38:        this->nextStage = wptr_nextStage;
+        -:   39:    }
+        -:   40:    else
+        -:   41:    {
+    #####:   42:        std::cerr << "Set Next Stage Failed, Stage: " << stageID << std::endl;
+        -:   43:    }
+    #####:   44:}
+        -:   45:
+        -:   46:// Set the task of the active object
+    #####:   47:void ActiveObject::setTaskHandler(std::function<void(std::weak_ptr<Graph>)> taskFunction)
+        -:   48:{
+    #####:   49:    bool isValidTaskFunction = static_cast<bool>(taskFunction);
+    #####:   50:    if (isValidTaskFunction)
+        -:   51:    {
+        -:   52:        {
+    #####:   53:            std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex 
+    #####:   54:            std::cout << "Set Task Handler for stage: " << stageID << std::endl;
+    #####:   55:        }
+    #####:   56:        this->taskHandler = std::move(taskFunction); // Set the task handler to the provided handler
+        -:   57:    }
+        -:   58:    else
+        -:   59:    {
+    #####:   60:        std::cerr << "Set Task Handler Failed, Stage: " << stageID << std::endl;
+        -:   61:    }
+    #####:   62:}
+        -:   63:
+        -:   64:// insert task to the queue
+    #####:   65:void ActiveObject::enqueueTask(std::weak_ptr<Graph> wptr_graph)
+        -:   66:{
+    #####:   67:    if (wptr_graph.lock() != nullptr)
+        -:   68:    {
+    #####:   69:        std::lock_guard<std::mutex> lock(this->mtx_AO); // Lock the mutex for the task queue
+    #####:   70:        this->queue_taskData.push(std::move(wptr_graph));
+        -:   71:        // Log it if it actually have next stage to enqueue
+    #####:   72:        if(this->nextStage.lock()) 
+        -:   73:        {
+    #####:   74:            std::cout<<"Active-Object: Stage "<<this->stageID<<" - Enqueue Task"<<std::endl;
+        -:   75:        }else
+        -:   76:        {
+    #####:   77:            std::cout<<"Active-Object: Stage "<<this->stageID<<" - No Next Stage \n**Task is Done**"<<std::endl;
+        -:   78:        }
+    #####:   79:    }
+        -:   80:    else
+        -:   81:    {
+    #####:   82:        std::cerr << "Enqueue Failed, Stage: " << this->stageID << std::endl;
+        -:   83:    }
+        -:   84:
+    #####:   85:    if (!this->working)
+        -:   86:    {
+    #####:   87:        this->cv_AO.notify_one();
+        -:   88:    }
+    #####:   89:}
+        -:   90:
+        -:   91:// The main work function for the active object
+    #####:   92:void ActiveObject::work()
+        -:   93:{
+        -:   94:    // infinite loop till the stop flag is set to true so that the thread can be stopped
+    #####:   95:    while (!this->stop)
+        -:   96:    { // Loop until the stop flag is set
+        -:   97:
+    #####:   98:        if (queue_taskData.empty())
+        -:   99:        {                          // Check if the task queue is empty
+    #####:  100:            this->working = false; // Set the working flag to false (in case it was working before it was empty)
+        -:  101:
+    #####:  102:            std::unique_lock<std::mutex> lock(this->mtx_AO);
+    #####:  103:            std::cout << "Stage " << this->stageID << " (Thread " << std::this_thread::get_id() << ") is sleeping" << std::endl;
+        -:  104:            // Wait until a task is [enqueued] or [stop flag is set] and [notify condition]
+    #####:  105:            cv_AO.wait(lock, [this]
+    #####:  106:                       { return (!this->queue_taskData.empty()) || this->stop; });
+        -:  107:
+    #####:  108:            this->working = true; // Set the working flag to true
+    #####:  109:            std::cout << "Stage " << stageID << " (Thread " << std::this_thread::get_id() << ") has woke up" << std::endl;
+    #####:  110:        }
+        -:  111:
+    #####:  112:        if (this->stop)
+        -:  113:        {
+    #####:  114:            stopProcess();
+    #####:  115:            return;
+        -:  116:        }
+        -:  117:        else
+        -:  118:        {
+        -:  119:            try{
+    #####:  120:                std::weak_ptr<Graph> wptr_graph;
+        -:  121:                {
+    #####:  122:                    std::lock_guard<std::mutex> lock(this->mtx_AO); // Lock the mutex for the active task
+    #####:  123:                    wptr_graph = this->queue_taskData.front();
+    #####:  124:                    this->queue_taskData.pop();
+    #####:  125:                }
+    #####:  126:                this->taskHandler(wptr_graph); // Call the task handler
+        -:  127:
+        -:  128:                // get the next stage shared ptr
+    #####:  129:                if (auto nextStagePtr = this->nextStage.lock())
+        -:  130:                {
+        -:  131:                    {
+    #####:  132:                        std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex
+    #####:  133:                        std::cout<<"Active-Object: Stage "<<this->stageID<<" - Enqueue Task to Next Stage: "<<nextStagePtr->stageID<<std::endl;
+    #####:  134:                    }
+    #####:  135:                    nextStagePtr->enqueueTask(wptr_graph);
+    #####:  136:                }
+    #####:  137:            }
+    =====:  138:            catch(const std::exception& e)
+        -:  139:            {
+    =====:  140:                std::cerr << "Error - Execute task: " << e.what() << std::endl;
+    =====:  141:            }
+        -:  142:        }
+        -:  143:    }
+        -:  144:}
+        -:  145:
+    #####:  146:void ActiveObject::stopActiveObject()
+        -:  147:{
+        -:  148:    {
+    #####:  149:        std::lock_guard<std::mutex> lock(mtx_AO); // Lock the mutex        
+    #####:  150:        std::cout << "\n********* START Active Object " << this->stageID << " Stop Process *********" << std::endl;
+    #####:  151:        this->stop = true;
+    #####:  152:    }
+    #####:  153:    if (!this->working)
+        -:  154:    {
+    #####:  155:        this->cv_AO.notify_all();
+        -:  156:    }
+    #####:  157:}
+        -:  158:
+    #####:  159:void ActiveObject::stopProcess()
+        -:  160:{
+    #####:  161:    std::unique_lock<std::mutex> lock(mtx_AO); // Lock the mutex 
+    #####:  162:    while (!this->queue_taskData.empty())
+        -:  163:    {
+    #####:  164:        lock.unlock();
+    #####:  165:        this->queue_taskData.front().reset(); // release weak ptr
+    #####:  166:        this->queue_taskData.pop();
+        -:  167:    }
+    #####:  168:    std::cout << "\nActive-Object: Stage " << this->stageID << " (Active-Object):  Clean tasks queue" << std::endl;
+    #####:  169:}

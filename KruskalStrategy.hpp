@@ -6,7 +6,6 @@
 #include <tuple>
 #include <algorithm>
 #include <memory>
-#include <iostream>
 
 class KruskalStrategy : public MSTStrategy
 {

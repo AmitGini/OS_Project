@@ -1,0 +1,181 @@
+        -:    0:Source:Pipeline.cpp
+        -:    1:#include "Pipeline.hpp"
+        -:    2:
+        -:    3:// Stage definitions
+        -:    4:#define STAGE_UNDEFINE -1 // Undefined stage for error handling
+        -:    5:#define STAGE_0_START_MST_CALCULATION 0
+        -:    6:#define STAGE_1_TOTAL_WEIGHT_MST 1
+        -:    7:#define STAGE_2_LON_DIS_BET_TWO_VER_MST 2
+        -:    8:#define STAGE_3_SHO_DIS_BET_TWO_VER_MST 3
+        -:    9:#define STAGE_4_AVG_DIS_BET_TWO_EDG_MST 4
+        -:   10:#define STAGE_5_FINISH_MST_CALCUATION 5
+        -:   11:
+    #####:   12:Pipeline::Pipeline()
+        -:   13:{
+        -:   14:    {
+    #####:   15:        std::lock_guard<std::mutex> lock(mtx);
+    #####:   16:        std::cout << "Starting Pipeline Design Pattern" << std::endl;
+    #####:   17:    }
+    #####:   18:    createAOStages();
+    #####:   19:    setAONextStage();
+    #####:   20:    setTaskHandler();
+    #####:   21:}
+        -:   22:
+    #####:   23:Pipeline::~Pipeline()
+        -:   24:{
+        -:   25:    {
+    #####:   26:        std::lock_guard<std::mutex> lock(mtx);
+    #####:   27:        std::cout << "\n********* START Pipeline Stop Process *********" << std::endl;
+    #####:   28:    }
+        -:   29:
+        -:   30:    // Lock the mutex to ensure thread safety
+    #####:   31:    for (auto stage : stages)
+        -:   32:    {
+    #####:   33:        stage->stopActiveObject(); // Stop the active object
+    #####:   34:    }
+        -:   35:    
+        -:   36:    // Clear the stages vector to release the shared_ptr resources
+    #####:   37:    stages.clear();
+    #####:   38:    std::lock_guard<std::mutex> lock(mtx);
+    #####:   39:    std::cout << "\nPipeline: Cleared Active-Object Stages " << std::endl;
+    #####:   40:    std::cout << "\n********* FINISH Pipeline Stop Process *********" << std::endl;
+    #####:   41:}
+        -:   42:
+        -:   43:// Process the graphs that sended from the server
+    #####:   44:void Pipeline::processGraphs(std::vector<std::weak_ptr<Graph>> &graphs)
+        -:   45:{
+        -:   46:    // Lock mutex is done in the active object enqueueTask function
+    #####:   47:    for (auto graph : graphs)
+        -:   48:    {
+    #####:   49:        stages[STAGE_0_START_MST_CALCULATION]->enqueueTask(graph); // enqueue the weak ptr although we have used shared ptr for validation
+    #####:   50:    }
+    #####:   51:}
+        -:   52:
+    #####:   53:void Pipeline::createAOStages()
+        -:   54:{
+        -:   55:    try
+        -:   56:    {
+        -:   57:        // Create stages with error checking
+    #####:   58:        std::lock_guard<std::mutex> lock(mtx);
+    #####:   59:        for (int stageNumber = STAGE_0_START_MST_CALCULATION; stageNumber <= STAGE_5_FINISH_MST_CALCUATION; ++stageNumber)
+        -:   60:        {
+    #####:   61:            std::cout << "***** " << "Pipeline: Creating stage " << stageNumber << " *****" << std::endl;
+    #####:   62:            stages.push_back(std::make_shared<ActiveObject>(stageNumber)); // Create a shared pointer to an active object
+    #####:   63:            std::cout << "Pipeline: Stage " << stageNumber << " created successfully" << std::endl;
+        -:   64:        }
+    #####:   65:    }
+    =====:   66:    catch (const std::exception &e)
+        -:   67:    {
+    =====:   68:        std::cerr << "Pipeline: Stage creation failed: " << e.what() << std::endl;
+    =====:   69:        throw;
+    =====:   70:    }
+    #####:   71:}
+        -:   72:
+    #####:   73:void Pipeline::setAONextStage()
+        -:   74:{
+        -:   75:    try
+        -:   76:    {
+    #####:   77:        std::weak_ptr<ActiveObject> myNextStage = stages[STAGE_1_TOTAL_WEIGHT_MST]; // Stage 1
+    #####:   78:        stages[STAGE_0_START_MST_CALCULATION]->setNextStage(myNextStage);           // Set Stage 0 -> 1
+    #####:   79:        myNextStage = stages[STAGE_2_LON_DIS_BET_TWO_VER_MST];                      // Stage 2
+    #####:   80:        stages[STAGE_1_TOTAL_WEIGHT_MST]->setNextStage(myNextStage);                // Set Stage 1 -> 2
+    #####:   81:        myNextStage = stages[STAGE_3_SHO_DIS_BET_TWO_VER_MST];                      // Stage 3
+    #####:   82:        stages[STAGE_2_LON_DIS_BET_TWO_VER_MST]->setNextStage(myNextStage);         // Set Stage 2 -> 3
+    #####:   83:        myNextStage = stages[STAGE_4_AVG_DIS_BET_TWO_EDG_MST];                      // Stage 4
+    #####:   84:        stages[STAGE_3_SHO_DIS_BET_TWO_VER_MST]->setNextStage(myNextStage);         // Set Stage 3 -> 4
+    #####:   85:        myNextStage = stages[STAGE_5_FINISH_MST_CALCUATION];                        // Stage 5
+    #####:   86:        stages[STAGE_4_AVG_DIS_BET_TWO_EDG_MST]->setNextStage(myNextStage);         // Set Stage 4 -> 5
+    #####:   87:    }
+    =====:   88:    catch (const std::exception &e)
+        -:   89:    {
+    =====:   90:        std::cerr << "Set Next Active Object Failed: " << e.what() << std::endl;
+    =====:   91:        throw;
+    =====:   92:    }
+    #####:   93:}
+        -:   94:
+        -:   95:// define the task handlers for each stage
+    #####:   96:void Pipeline::setTaskHandler()
+        -:   97:{
+        -:   98:    try
+        -:   99:    {
+        -:  100:        // Define task handlers for each stage
+    #####:  101:        stages[STAGE_0_START_MST_CALCULATION]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  102:        {
+        -:  103:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  104:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  105:
+        -:  106:            // Check if the shared_ptr is valid
+    #####:  107:            if (sharedGraph) {
+    #####:  108:                sharedGraph->setMSTDataCalculationNextStatus();  // Access the method  (next set status is progress = 0 previous is none = -1)
+        -:  109:            } else {   // Handle the case where the managed object no longer exists
+    #####:  110:                std::cerr << "Graph object no longer exists." << std::endl;
+        -:  111:            }
+    #####:  112:        });
+        -:  113:
+    #####:  114:        stages[STAGE_1_TOTAL_WEIGHT_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  115:                                                         {
+        -:  116:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  117:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  118:
+        -:  119:            // Check if the shared_ptr is valid
+    #####:  120:            if (sharedGraph) {
+    #####:  121:                sharedGraph->setMSTTotalWeight();  // Access the method
+        -:  122:            } else {   // Handle the case where the managed object no longer exists
+    #####:  123:                std::cerr << "Graph object no longer exists." << std::endl;
+    #####:  124:            } });
+        -:  125:
+    #####:  126:        stages[STAGE_2_LON_DIS_BET_TWO_VER_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  127:                                                                {
+        -:  128:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  129:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  130:
+        -:  131:            // Check if the shared_ptr is valid
+    #####:  132:            if (sharedGraph) {
+    #####:  133:                sharedGraph->setMSTLongestDistance();  // Access the method
+        -:  134:            } else {   // Handle the case where the managed object no longer exists
+    #####:  135:                std::cerr << "Graph object no longer exists." << std::endl;
+    #####:  136:            } });
+        -:  137:
+    #####:  138:        stages[STAGE_3_SHO_DIS_BET_TWO_VER_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  139:                                                                {
+        -:  140:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  141:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  142:
+        -:  143:            // Check if the shared_ptr is valid
+    #####:  144:            if (sharedGraph) {
+    #####:  145:                sharedGraph->setMSTShortestDistance();  // Access the method
+        -:  146:            } else {   // Handle the case where the managed object no longer exists
+    #####:  147:                std::cerr << "Graph object no longer exists." << std::endl;
+    #####:  148:            } });
+        -:  149:
+    #####:  150:        stages[STAGE_4_AVG_DIS_BET_TWO_EDG_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  151:                                                                {
+        -:  152:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  153:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  154:
+        -:  155:            // Check if the shared_ptr is valid
+    #####:  156:            if (sharedGraph) {
+    #####:  157:                sharedGraph->setMSTAvgEdgeWeight();  // Access the method
+        -:  158:            } else {   // Handle the case where the managed object no longer exists
+    #####:  159:                std::cerr << "Graph object no longer exists." << std::endl;
+    #####:  160:            } });
+        -:  161:
+    #####:  162:        stages[STAGE_5_FINISH_MST_CALCUATION]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
+        -:  163:                                                              {
+        -:  164:            // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
+    #####:  165:            std::shared_ptr<Graph> sharedGraph = graph.lock();
+        -:  166:
+        -:  167:            // Check if the shared_ptr is valid
+    #####:  168:            if (sharedGraph) {
+    #####:  169:                sharedGraph->setMSTDataCalculationNextStatus();  // Access the method (next set status is finish = 1, previous one is progress = 0)
+        -:  170:            } else {   // Handle the case where the managed object no longer exists
+    #####:  171:                std::cerr << "Graph object no longer exists." << std::endl;
+    #####:  172:            } });
+        -:  173:    }
+    =====:  174:    catch (const std::exception &e)
+        -:  175:    {
+    =====:  176:        std::cerr << "Set Next Active Object Failed: " << e.what() << std::endl;
+    =====:  177:        throw;
+    =====:  178:    }
+    #####:  179:}
+        -:  180:

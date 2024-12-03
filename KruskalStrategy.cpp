@@ -25,7 +25,10 @@ bool KruskalStrategy::hasCycle(int current, int parent, const std::vector<std::v
 
 std::unique_ptr<std::vector<std::vector<int>>> KruskalStrategy::computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix)
 {
-    std::cout << "Strategy Activated - Start Compute MST using Kruskal" << std::endl;
+    {
+        std::lock_guard<std::mutex> cout_lock(cout_mtx);
+        std::cout << "Strategy Activated - Start Compute MST using Kruskal" << std::endl;
+    }
     int numVertices = graphAdjacencyMatrix.size();
     std::vector<std::tuple<int, int, int>> edges; // (weight, src, dest) To keep track of included edges for sorting and processing
 
@@ -72,8 +75,10 @@ std::unique_ptr<std::vector<std::vector<int>>> KruskalStrategy::computeMST(const
                 break; // Stop when enough edges have been added
         }
     }
-
-    std::cout << "Finish Compute MST using Kruskal" << std::endl;
+    {
+        std::lock_guard<std::mutex> cout_lock(cout_mtx);
+        std::cout << "Finish Compute MST using Kruskal" << std::endl;
+    }
     // Reference of the MST adjacency matrix
     return mstMatrix;
 }
