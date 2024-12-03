@@ -2,15 +2,14 @@
 #include <iostream>
 #include <algorithm>
 
-std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Graph &graph)
+std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix)
 {
-    int numVertices = graph.getSizeVertices();
-    std::cout << "Number of vertices: " << numVertices << std::endl;
+    std::cout << "Strategy Activated - Start Compute MST using Prim" << std::endl;
+    int numVertices = graphAdjacencyMatrix.size();
+    
 
     if (numVertices == 0)
         return nullptr;
-
-    const auto &adjacencyMatrix = graph.getGraph();
 
     std::vector<int> minEdgeToVertex(numVertices, std::numeric_limits<int>::max());
     std::vector<int> parentVertex(numVertices, -1);
@@ -24,7 +23,7 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Gr
     int startVertex = 0;
     for (int i = 0; i < numVertices; ++i)
     {
-        if (std::any_of(adjacencyMatrix[i].begin(), adjacencyMatrix[i].end(), [](int w)
+        if (std::any_of(graphAdjacencyMatrix[i].begin(), graphAdjacencyMatrix[i].end(), [](int w)
                         { return w != 0; }))
         {
             startVertex = i;
@@ -32,7 +31,7 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Gr
         }
     }
 
-    std::cout << "Starting from vertex: " << startVertex << std::endl;
+    
 
     minEdgeToVertex[startVertex] = 0;
     minEdgeQueue.push({0, startVertex});
@@ -47,11 +46,9 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Gr
 
         isInMST[currentVertex] = true;
 
-        std::cout << "Processing vertex: " << currentVertex << std::endl;
-
         for (int adjacentVertex = 0; adjacentVertex < numVertices; ++adjacentVertex)
         {
-            int weight = adjacencyMatrix[currentVertex][adjacentVertex];
+            int weight = graphAdjacencyMatrix[currentVertex][adjacentVertex];
             if (weight != 0 && !isInMST[adjacentVertex] && weight < minEdgeToVertex[adjacentVertex])
             {
                 parentVertex[adjacentVertex] = currentVertex;
@@ -70,11 +67,11 @@ std::unique_ptr<std::vector<std::vector<int>>> PrimStrategy::computeMST(const Gr
         int parent = parentVertex[vertex];
         if (parent != -1)
         {
-            int weight = adjacencyMatrix[parent][vertex];
+            int weight = graphAdjacencyMatrix[parent][vertex];
             (*mstMatrix)[parent][vertex] = weight;
             (*mstMatrix)[vertex][parent] = weight;
         }
     }
-
+    std::cout << "Finish Compute MST using Prim" << std::endl;
     return mstMatrix;
 }

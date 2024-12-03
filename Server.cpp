@@ -5,7 +5,7 @@
 #define NO_MST_DATA_CALCULATION -1
 
 // Constructor
-Server::Server()
+Server::Server(): server_fd(INVALID), pipeline(nullptr), leaderfollower(nullptr), stopServer(false)
 {
     std::cout << "Start Building the Server..." << std::endl;
     std::cout << "Starting Pipeline Design Pattern" << std::endl;
@@ -149,7 +149,7 @@ void Server::handleConnections()
 
 void Server::handleRequest(int client_FD)
 {
-    if (client_socket < 0)
+    if (client_FD < 0)
     {
         std::perror("Error: Invalid client file descriptor.");
         return;
@@ -199,7 +199,7 @@ void Server::handleRequest(int client_FD)
                     break;
 
                 case 4:
-                    printMSTGraphsData(client_FD);
+                    sendMSTDataToClient(client_FD);
                     break;
 
                 default:
@@ -229,7 +229,7 @@ void Server::sendMessage(int client_FD, const std::string message)
 void Server::graphCreation(int client_FD)
 {
     sendMessage(client_FD, "Enter the number of vertices: ");
-    int numVertices = receiveIntFromClient(client_FD);
+    int numVertices = getIntegerInputFromClient(client_FD);
 
     if (numVertices <= 0)
     {
@@ -238,57 +238,62 @@ void Server::graphCreation(int client_FD)
     }
 
     auto graph = std::make_shared<Graph>(numVertices);
-
-    sendMessage(client_FD, "Enter the number of edges: ");
-    int numEdges = receiveIntFromClient(client_FD);
-
-    if (numEdges < 0)
+    int numEdges = -1;
+    while(numEdges < 0)
     {
-        sendMessage(client_FD, "Invalid number of edges.\n");
-        graph.reset();
-        return;
+        try
+        {
+            sendMessage(client_FD, "Enter the number of edges: ");
+            numEdges = getIntegerInputFromClient(client_FD);
+        }
+        catch (const std::exception &e)
+        {
+            sendMessage(client_FD, "Invalid number of edges.\n");
+            continue;
+        }
     }
 
     for (int i = 0; i < numEdges; ++i)
     {
-        sendMessage(client_FD, "Enter edge (format: src dest weight): ");
-        std::string edgeInput = receiveStringFromClient(client_FD);
+        int src = -1, dest = -1, weight = -1;
+        while((src < 0 || src >= numVertices) || (dest < 0 || dest >= numVertices))
+        {
+            try
+            {
+                sendMessage(client_FD, "Edge - Enter Source / From: ");
+                src = getIntegerInputFromClient(client_FD);
+                sendMessage(client_FD, "Edge - Enter Destination / To: ");
+                dest = getIntegerInputFromClient(client_FD);
+                sendMessage(client_FD, "Edge - Enter Weight: ");
+                weight = getIntegerInputFromClient(client_FD);
+            }
+            catch (const std::exception &e)
+            {
+                sendMessage(client_FD, "Invalid vertices in edge.\n");
+                continue;  // retry this edge
+            }
 
-        int src, dest, weight;
-        std::istringstream iss(edgeInput);
-        if (!(iss >> src >> dest >> weight))
-        {
-            sendMessage(client_FD, "Invalid edge format.\n");
-            --i; // retry this edge
-            continue;
+            graph->addEdge(src, dest, weight);  // Add the edge to the graph
         }
 
-        try
-        {
-            graph->addEdge(src, dest, weight);
-        }
-        catch (const std::out_of_range &e)
-        {
-            sendMessage(client_FD, "Invalid vertices in edge.\n");
-            --i; // retry this edge
-            continue;
-        }
+        src = -1, dest = -1, weight = -1;  // Reset the values
     }
 
+    std::unique_ptr<MSTStrategy> algorithmType;
     while (true)
     {
-        sendMessage(client_FD, "Choose MST algorithm:\n1. Prim's Algorithm\n2. Kruskal's Algorithm\nChoice: ");
-        int algorithmChoice = receiveIntFromClient(client_FD);
-
-        MSTFactory::AlgorithmType algorithmType;
+        sendMessage(client_FD, "Choose MST algorithm:\n"                                "1. Prim's Algorithm\n"
+                           "2. Kruskal's Algorithm\nChoice: ");
+        int algorithmChoice = getIntegerInputFromClient(client_FD);
+        
         if (algorithmChoice == 1)
         {
-            algorithmType = MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Prim);
+            algorithmType = std::move(MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Prim));
             break;
         }
         else if (algorithmChoice == 2)
         {
-            algorithmType = MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Kruskal);
+            algorithmType = std::move(MSTFactory::createMSTStrategy(MSTFactory::AlgorithmType::Kruskal));
             break;
         }
         else
@@ -298,8 +303,8 @@ void Server::graphCreation(int client_FD)
         }
     }
 
-    // Store the graph along with the chosen algorithm
-    graph->setMSTAlgorithmType(strategy->computeMST(graph););
+    graph->setMSTStrategy(std::move(algorithmType));  // Set the chosen algorithm
+    graph->activateMSTStrategy();  // Store the graph along with the chosen algorithm
 
     if (graph->getValidationMSTExist())
     {
@@ -319,7 +324,7 @@ void Server::sendDataToPipeline(int client_FD)
 {
     std::lock_guard<std::mutex> lock(this->mtx);
     if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
-    this->leaderfollower->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
+    this->pipeline->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
     sendMessage(client_FD, "All graphs have been sent to Pipeline for processing using Active Object.\n");
 }
 
@@ -327,7 +332,7 @@ void Server::sendDataToLeaderFollower(int client_FD)
 {
     std::lock_guard<std::mutex> lock(this->mtx);
     if(this->vec_WeakPtrGraphs_Unprocessed.size() > 0) filterUnprocessedGraphs();
-    this->pipeline->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
+    this->leaderfollower->processGraphs(this->vec_WeakPtrGraphs_Unprocessed);
     sendMessage(client_FD, "All graphs have been sent to Leader-Follower for processing.\n");
 }
 
@@ -343,19 +348,19 @@ void Server::filterUnprocessedGraphs()
             {
                 if (sharedGraph->getMSTDataStatusCalculation() == NO_MST_DATA_CALCULATION)
                 {
-                    tempWeakGraphs.push_back(weakGraph);  // Add the graph to the temporary vector
+                    tempWeakGraphs.push_back(sharedGraph);  // Add the graph to the temporary vector
                 }
             }
         }
     }
-    if(this->vec_WeakPtrGraphs_Unprocessed.size() != weakGraph.size()) {
-        this->vec_WeakPtrGraphs_Unprocessed = std::move(weakGraphs);  // prevent copying
-        std::cout << "Unprocessed Graphs are filtered, remain " << weakGraph.size() <<" graphs to process"<< std::endl;
+    if(this->vec_WeakPtrGraphs_Unprocessed.size() != tempWeakGraphs.size()) {
+        this->vec_WeakPtrGraphs_Unprocessed = std::move(tempWeakGraphs);  // prevent copying
+        std::cout << "Unprocessed Graphs are filtered, remain " << tempWeakGraphs.size() <<" graphs to process"<< std::endl;
     }
 }
 
 // Get MST data based on choice
-bool Server::sendMSTDataToClient(int client_FD)
+void Server::sendMSTDataToClient(int client_FD)
 {
     if (client_FD < 0)
     {
@@ -378,7 +383,12 @@ bool Server::sendMSTDataToClient(int client_FD)
             sendMessage(client_FD, message);
             continue;
         }
-
+        else if(myGraph->getMSTDataStatusCalculation() == NO_MST_DATA_CALCULATION)
+        {
+            message = "MST is not computed. Please pass it to Pipeline or Leader-Follower.\n";
+            sendMessage(client_FD, message);
+            continue;
+        }
         message = "Weight of the longest path in MST: " + std::to_string(myGraph->getMSTLongestDistance()) + "\n";
         message += "Weight of the shortest path in MST: " + std::to_string(myGraph->getMSTShortestDistance()) + "\n";
         message += "Average weight of the edges in MST: " + std::to_string(myGraph->getMSTAvgEdgeWeight()) + "\n";
@@ -388,18 +398,17 @@ bool Server::sendMSTDataToClient(int client_FD)
     }
 }
 
-bool Server::stopClient(int &client_FD)
+void Server::stopClient(int client_FD)
 { // Stop the client connection
     if (client_FD < 0)
     {
         std::perror("Error: Invalid client file descriptor.");
-        return false;
     }
+    close(client_FD);
     std::cout << "Client Connection Closed" << std::endl;
-    return true;
 }
 
-int Server::receiveIntFromClient(int client_FD)
+int Server::getIntegerInputFromClient(int client_FD)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
@@ -416,7 +425,7 @@ int Server::receiveIntFromClient(int client_FD)
     return data;
 }
 
-std::string Server::receiveStringFromClient(int client_FD)
+std::string Server::getStringInputFromClient(int client_FD)
 {
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
@@ -426,7 +435,7 @@ std::string Server::receiveStringFromClient(int client_FD)
 
 int main(int argc, char *argv[])
 {
-    Server *serverObj = pipelineFlag ? new Server(true) : new Server(false);
+    Server *serverObj = new Server();
     delete serverObj;
     return 0;
 }

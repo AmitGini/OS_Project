@@ -10,6 +10,7 @@ Graph::Graph(int vertices)
     : numVertices(vertices), numEdges(INIT_INTEGER),
       mstTotalWeight(INIT_INTEGER), mstLongestDistance(INIT_INTEGER), mstShortestDistance(INT_MAX),
       mstAvgEdgeWeight(INIT_DOUBLE), mstDataStatus(NO_MST_DATA_CALCULATION),
+      mstStrategy(nullptr), mstMatrix(nullptr),
       graphMatrix(vertices, std::vector<int>(vertices, INIT_INTEGER)) {}
 
 // Add edge to graph
@@ -31,6 +32,25 @@ void Graph::addEdge(int u, int v, int weight)
         this->graphMatrix[u][v] = weight;
         this->graphMatrix[v][u] = weight; // Assuming undirected graph
         this->numEdges++;
+    }
+}
+
+void Graph::activateMSTStrategy()
+{
+    if (this->mstStrategy != nullptr)
+    {
+        try 
+        {
+            this->mstMatrix = std::move(this->mstStrategy->computeMST(this->graphMatrix));
+        } 
+        catch (const std::exception& e) 
+        {
+            std::cerr << "Error computing MST: " << e.what() << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "MST Strategy is not set" << std::endl;
     }
 }
 
@@ -78,17 +98,10 @@ bool Graph::getValidationMSTExist() const
     return this->mstMatrix != nullptr;
 }
 
-/*  Setters */
 
-// Set adjacency matrix represent the MST
-void Graph::setMST(std::unique_ptr<std::vector<std::vector<int>>> mst)
-{
-    if (!mst)
-    {
-        return;
-    }
-    this->mstMatrix = std::move(mst);
-}
+
+
+/*  Setters */
 
 // Set the next status of the MST data calculation
 void Graph::setMSTDataCalculationNextStatus()
@@ -105,11 +118,16 @@ void Graph::setMSTDataCalculationNextStatus()
     {
         std::cout << "** WARNING ** Trying to update MST Data Status - When status is -Finish-" << std::endl;
     }
+    std::cout<<"MST Data Status Updated to: "<<this->mstDataStatus<<std::endl;
 }
 
 // Calculate and return the total weight of MST
 void Graph::setMSTTotalWeight()
 {
+    if(mstMatrix == nullptr)
+    {
+        return;
+    }
     int totalWeight = INIT_INTEGER;
     for (int i = 0; i < this->numVertices; ++i)
     {
@@ -124,6 +142,10 @@ void Graph::setMSTTotalWeight()
 // Return the highest weighted distance in the MST
 void Graph::setMSTLongestDistance()
 {
+    if(mstMatrix == nullptr)
+    {
+        return;
+    }
     int longestDistance = INIT_INTEGER;
     int numVertices = this->numVertices;
 
@@ -166,6 +188,10 @@ void Graph::setMSTLongestDistance()
 // Return the average edge weight in the MST
 void Graph::setMSTAvgEdgeWeight()
 {
+    if(mstMatrix == nullptr)
+    {
+        return;
+    }
     int numVertices = this->getSizeVertices();
     double totalWeight = INIT_DOUBLE;
     double edgeCount = INIT_DOUBLE;
@@ -190,8 +216,14 @@ void Graph::setMSTAvgEdgeWeight()
     this->mstAvgEdgeWeight = (totalWeight / edgeCount);
 }
 
+
+
 void Graph::setMSTShortestDistance()
 {
+    if(mstMatrix == nullptr)
+    {
+        return;
+    }
     int shortestDistance = INT_MAX;
     int numVertices = this->numVertices;
 
@@ -231,9 +263,18 @@ void Graph::setMSTShortestDistance()
     this->mstShortestDistance = (shortestDistance == INT_MAX) ? 0 : shortestDistance;
 }
 
+void Graph::setMSTStrategy(std::unique_ptr<MSTStrategy> strategy)
+{
+    this->mstStrategy = std::move(strategy);
+}
+
 // Get String to print of adjacency matrix represent the MST
 std::string Graph::printMST() const
 {
+    if(mstMatrix == nullptr)
+    {
+        return "No MST";
+    }
     std::stringstream mstString;
     for (int i = 0; i < this->numVertices; ++i)
     {

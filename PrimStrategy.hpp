@@ -10,6 +10,6 @@
 class PrimStrategy : public MSTStrategy
 {
 public:
-    std::unique_ptr<std::vector<std::vector<int>>> computeMST(const Graph &graph) override;
+    std::unique_ptr<std::vector<std::vector<int>>> computeMST(const std::vector<std::vector<int>> &graphAdjacencyMatrix) override;
 };
 #endif

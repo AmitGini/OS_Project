@@ -13,6 +13,7 @@ Pipeline::Pipeline()
 {
     createAOStages();
     setAONextStage();
+    setTaskHandler();
 }
 
 Pipeline::~Pipeline()
@@ -91,7 +92,7 @@ void Pipeline::setTaskHandler()
     {
         // Define task handlers for each stage
         stages[STAGE_0_START_MST_CALCULATION]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
-                                                              {
+        {
             // Lock the weak_ptr to get a shared_ptr (to be able to access the graph methods)
             std::shared_ptr<Graph> sharedGraph = graph.lock();
 
@@ -100,7 +101,8 @@ void Pipeline::setTaskHandler()
                 sharedGraph->setMSTDataCalculationNextStatus();  // Access the method  (next set status is progress = 0 previous is none = -1)
             } else {   // Handle the case where the managed object no longer exists
                 std::cerr << "Graph object no longer exists." << std::endl;
-            } });
+            }
+        });
 
         stages[STAGE_1_TOTAL_WEIGHT_MST]->setTaskHandler([this](std::weak_ptr<Graph> graph) -> void
                                                          {
