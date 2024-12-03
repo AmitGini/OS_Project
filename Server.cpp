@@ -451,9 +451,19 @@ std::string Server::getStringInputFromClient(int client_FD)
     return std::string(buffer);
 }
 
+#include <csignal>
+
+static void signal_handler(int signal) {
+    std::cout << "Signal received: " << signal << ", exiting cleanly." << std::endl;
+    std::exit(0); // Ensures coverage data is written
+}
+
 int main(int argc, char *argv[])
 {
+    std::signal(SIGINT, signal_handler);  // Handle Ctrl+C
+    std::signal(SIGTERM, signal_handler); // Handle kill command
     Server *serverObj = new Server();
     delete serverObj;
     return 0;
 }
+

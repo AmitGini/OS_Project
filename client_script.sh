@@ -61,5 +61,8 @@
     sleep 0.5
     echo "stop"
     sleep 1
-} | telnet localhost 4040
+} | nc localhost 4040
+{
 sleep 2
+echo "stop" 
+} > server_input

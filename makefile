@@ -2,8 +2,8 @@
 
 # Compiler settings
 CXX = g++
-CXXFLAGS = -g -std=c++17
-COVFLAGS = -fprofile-arcs -ftest-coverage
+CXXFLAGS = -g
+COVFLAGS = -fprofile-arcs -ftest-coverage -g
 OBJECTS = Server.o Graph.o KruskalStrategy.o PrimStrategy.o Pipeline.o ActiveObject.o LeaderFollower.o
 
 # Default target
@@ -14,7 +14,7 @@ graph: $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 # run callgrind in the terminal
-callgrind: client_script.sh graph
+callgrind: clean client_script.sh graph
 	rm -rf callgrind_data
 	chmod +x client_script.sh
 	valgrind --tool=callgrind --dump-instr=yes --simulate-cache=yes --collect-jumps=yes ./graph & echo $$! > server_pid.txt
@@ -31,7 +31,7 @@ callgrind: client_script.sh graph
 	rm -f server_pid.txt
 
 # Run memcheck in the terminal
-memcheck: client_script.sh graph
+memcheck: clean client_script.sh graph
 	rm -rf memcheck_data
 	mkdir -p memcheck_data
 	chmod +x client_script.sh
@@ -43,7 +43,7 @@ memcheck: client_script.sh graph
 	rm -f server_pid.txt
 
 # Run helgrind in the terminal
-helgrind: client_script.sh graph
+helgrind: clean client_script.sh graph
 	rm -rf helgrind_data
 	mkdir -p helgrind_data
 	chmod +x client_script.sh
@@ -55,25 +55,31 @@ helgrind: client_script.sh graph
 	rm -f server_pid.txt
 	@echo "Helgrind analysis saved to helgrind_data/helgrind_report.log"
 
-
 # Target to compile with coverage flags
-coverage: CXXFLAGS += $(COVFLAGS)
-coverage: cleanCoverage graph
-	mkdir -p coverage/gcov
-	./graph & echo $$! > server_pid.txt
+coverage: CXXFLAGS = $(COVFLAGS)
+coverage: clean client_script.sh graph
+	rm -rf coverage_data
+	rm -rf coverage_report
+	chmod +x client_script.sh
+	mkfifo server_input
+	./graph < server_input & echo $$! > server_pid.txt
 	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-	./client_script.sh
-	kill $$(cat server_pid.txt)
-	sleep 1
-	gcov -o . *.cpp
-	mv *.gcov coverage/gcov/
-	lcov --capture --directory . --output-file coverage/coverage.info
-	lcov --remove coverage/coverage.info '/usr/*' --output-file coverage/coverage.info
-	genhtml coverage/coverage.info --output-directory coverage/html
-	mkdir -p coverage/data
-	mv *.gcda coverage/data/
-	mv *.gcno coverage/data/
+	./client_script.sh | tee server_input
+	echo "stop" > server_input
+	sleep 5
+	kill $$(cat server_pid.txt) || true
 	rm -f server_pid.txt
+	rm -f server_input
+	sleep 1
+	lcov --capture --directory . --output-file coverage.info
+	lcov --remove coverage.info '/usr/*' --output-file coverage.info
+	genhtml coverage.info --output-directory coverage_report
+	mkdir -p coverage_data/gcov
+	mv *.gcda coverage_data/
+	mv *.gcno coverage_data/
+	mv *.gcov coverage_data/gcov/ || true
+	rm -f coverage.info
+
 
 # Rule to compile the source files
 Server.o: Server.cpp Server.hpp Graph.hpp  MSTFactory.hpp MSTStrategy.hpp Pipeline.hpp ActiveObject.hpp LeaderFollower.hpp 
@@ -99,12 +105,7 @@ LeaderFollower.o: LeaderFollower.cpp Graph.hpp LeaderFollower.hpp
 
 # Clean up
 clean:
-	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info
-	rm -rf profile_data callgrind_data html out
-
-cleanCoverage:
-	rm -f $(OBJECTS) graph *.gcda *.gcno
-	rm -rf coverage
+	rm -f *.o graph *.gcda *.gcno *.gcov gmon.out callgrind.out.* *.txt *.log *.info server_input
 
 # Declare phony targets
 .PHONY: all clean
