@@ -57,19 +57,10 @@ helgrind: clean client_script.sh graph
 
 # Target to compile with coverage flags
 coverage: CXXFLAGS = $(COVFLAGS)
-coverage: clean client_script.sh graph
+coverage: clean graph
 	rm -rf coverage_data
 	rm -rf coverage_report
-	chmod +x client_script.sh
-	mkfifo server_input
-	./graph < server_input & echo $$! > server_pid.txt
-	sleep 1 && while ! ss -tln | grep -q ":4040"; do sleep 0.5; done
-	./client_script.sh | tee server_input
-	echo "stop" > server_input
-	sleep 5
-	kill $$(cat server_pid.txt) || true
-	rm -f server_pid.txt
-	rm -f server_input
+	./graph
 	sleep 1
 	lcov --capture --directory . --output-file coverage.info
 	lcov --remove coverage.info '/usr/*' --output-file coverage.info

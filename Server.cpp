@@ -249,7 +249,7 @@ void Server::graphCreation(int client_FD)
     sendMessage(client_FD, "Enter the number of vertices: ");
     int numVertices = getIntegerInputFromClient(client_FD);
 
-    if (numVertices <= 0)
+    if (numVertices <= 1)
     {
         sendMessage(client_FD, "Invalid number of vertices.\n");
         return;
@@ -290,17 +290,17 @@ void Server::graphCreation(int client_FD)
                 sendMessage(client_FD, "Invalid vertices in edge.\n");
                 continue;  // retry this edge
             }
-
-            graph->addEdge(src, dest, weight);  // Add the edge to the graph
         }
 
+        graph->addEdge(src, dest, weight);  // Add the edge to the graph
         src = -1, dest = -1, weight = -1;  // Reset the values
     }
 
     std::unique_ptr<MSTStrategy> algorithmType;
     while (true)
     {
-        sendMessage(client_FD, "Choose MST algorithm:\n"                                "1. Prim's Algorithm\n"
+        sendMessage(client_FD, "Choose MST algorithm:\n"                                
+                            "1. Prim's Algorithm\n"
                            "2. Kruskal's Algorithm\nChoice: ");
         int algorithmChoice = getIntegerInputFromClient(client_FD);
         
@@ -396,7 +396,7 @@ void Server::sendMSTDataToClient(int client_FD)
         }
         else if (!myGraph->getValidationMSTExist())
         {
-            message = "MST is not computed. Please pass it to Pipeline or Leader-Follower.\n";
+            message = "MST Graph does exist, unable show mst data!.\n";
             sendMessage(client_FD, message);
             continue;
         }
@@ -451,17 +451,8 @@ std::string Server::getStringInputFromClient(int client_FD)
     return std::string(buffer);
 }
 
-#include <csignal>
-
-static void signal_handler(int signal) {
-    std::cout << "Signal received: " << signal << ", exiting cleanly." << std::endl;
-    std::exit(0); // Ensures coverage data is written
-}
-
 int main(int argc, char *argv[])
 {
-    std::signal(SIGINT, signal_handler);  // Handle Ctrl+C
-    std::signal(SIGTERM, signal_handler); // Handle kill command
     Server *serverObj = new Server();
     delete serverObj;
     return 0;
